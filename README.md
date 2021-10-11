@@ -10,17 +10,19 @@ Currently the plugin will link against carla shared libraries for the plugin hos
 Audio and time information works, but there is no latency, MIDI, parameters or state handled right now.  
 Also, only LV2 hosting is enabled at the moment.
 
-The project's goals follow
+![screenshot](Screenshot.png "Ildaeil")
 
 ## Goals
 
 The current formats Ildaeil can work as are:
+
 - JACK/Standalone
 - LV2
 - VST2
 - VST3
 
 And it can (in theory, later on) load the following plugin formats:
+
 - JACK (applications as plugins, Linux only)
 - LADSPA
 - DSSI
@@ -30,6 +32,7 @@ And it can (in theory, later on) load the following plugin formats:
 - AU (macOS only)
 
 Additionally the following files can be loaded:
+
 - Audio files (synced to host transport)
 - MIDI files (aligned to real/wall-clock time, synced to host transport)
 - SF2/3 files (through internal FluidSynth)
