@@ -1,0 +1,6 @@
+../Common/
+../../dpf/dgl/
+../../dpf/distrho/
+../../dpf-widgets/generic
+../../dpf-widgets/opengl
+/usr/include/carla

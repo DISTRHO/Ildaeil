@@ -25,7 +25,11 @@ FILES_UI = \
 include ../../dpf/Makefile.plugins.mk
 
 BUILD_CXX_FLAGS += -I../Common
+BUILD_CXX_FLAGS += -I../../dpf-widgets/generic
 BUILD_CXX_FLAGS += -I../../dpf-widgets/opengl
+
+BUILD_CXX_FLAGS += $(shell pkg-config --cflags carla-host-plugin carla-native-plugin carla-utils)
+LINK_FLAGS      += $(shell pkg-config --libs carla-host-plugin carla-native-plugin carla-utils)
 
 # --------------------------------------------------------------
 # Enable all possible plugin types
