@@ -1,7 +1,18 @@
 # DISTRHO Ildaeil
 
-DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.
+DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.  
 Load a VST2 plugin inside a LV2 host, or an LV2 plugin on a VST3 host, etc.
+
+THIS IS CURRENTLY A WORK IN PROGRESS RESEARCH PROJECT.
+
+It is not known yet how well this can work, mostly testing waters here.  
+Currently the plugin will link against carla shared libraries for the plugin host part, embeding UIs if possible.  
+Audio and time information works, but there is no latency, MIDI, parameters or state handled right now.  
+Also, only LV2 hosting is enabled at the moment.
+
+The project's goals follow
+
+## Goals
 
 The current formats Ildaeil can work as are:
 - JACK/Standalone
@@ -9,7 +20,7 @@ The current formats Ildaeil can work as are:
 - VST2
 - VST3
 
-And it can load the following plugin formats:
+And it can (in theory, later on) load the following plugin formats:
 - JACK (applications as plugins, Linux only)
 - LADSPA
 - DSSI
