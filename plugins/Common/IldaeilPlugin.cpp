@@ -35,6 +35,7 @@ static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpc
 
 class IldaeilPlugin : public Plugin
 {
+public:
     const NativePluginDescriptor* fCarlaPluginDescriptor;
     NativePluginHandle fCarlaPluginHandle;
 
@@ -45,7 +46,11 @@ class IldaeilPlugin : public Plugin
 
     UI* fUI;
 
-public:
+    void setUI(UI* const ui)
+    {
+        fUI = ui;
+    }
+
     IldaeilPlugin()
         : Plugin(0, 0, 0),
           fCarlaPluginDescriptor(nullptr),
@@ -60,7 +65,7 @@ public:
         memset(&fCarlaTimeInfo, 0, sizeof(fCarlaTimeInfo));
 
         fCarlaHostDescriptor.handle = this;
-        fCarlaHostDescriptor.resourceDir = carla_get_library_folder();
+        fCarlaHostDescriptor.resourceDir = "/Users/falktx/Source/Ildaeil"; // carla_get_library_folder();
         fCarlaHostDescriptor.uiName = "Ildaeil";
         fCarlaHostDescriptor.uiParentId = 0;
 
@@ -118,6 +123,7 @@ public:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fUI != nullptr,);
 
+        d_stdout("resizing ui to %u %u", width, height);
         fUI->setSize(width, height);
     }
 

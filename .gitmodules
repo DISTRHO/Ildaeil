@@ -4,3 +4,6 @@
 [submodule "dpf-widgets"]
 	path = dpf-widgets
 	url = https://github.com/DISTRHO/DPF-Widgets.git
+[submodule "carla"]
+	path = carla
+	url = git@github.com:falkTX/Carla.git

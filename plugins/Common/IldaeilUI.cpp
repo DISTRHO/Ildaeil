@@ -17,14 +17,12 @@
 
 #include "CarlaNativePlugin.h"
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-
 #include "../FX/DistrhoPluginInfo.h"
 
 #include "DistrhoUI.hpp"
 #include "DistrhoPlugin.hpp"
-#include "ResizeHandle.hpp"
+#include "SizeUtils.hpp"
+#include "extra/Thread.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -39,80 +37,167 @@ public:
 
     UI* fUI;
 
+    void setUI(UI* const ui)
+    {
+        fUI = ui;
+    }
+
     // ...
 };
 
 // -----------------------------------------------------------------------------------------------------------
 
+using namespace CarlaBackend;
+
 // shared resource pointer
 // carla_juce_init();
 
-class IldaeilUI : public UI
+class IldaeilUI : public UI, public Thread
 {
+    enum {
+        kDrawingInit,
+        kDrawingError,
+        kDrawingLoading,
+        kDrawingPluginList,
+        kDrawingPluginCustomUI,
+        kDrawingPluginGenericUI
+    } fDrawingState;
+
     IldaeilPlugin* const fPlugin;
-    // ResizeHandle fResizeHandle;
 
     uint fPluginCount;
     uint fPluginSelected;
+    CarlaCachedPluginInfo* fPlugins;
 
-    ::Window fHostWindowLookingToResize;
+    bool fPluginSearchActive;
+    char fPluginSearchString[0xff];
+
+    bool fInitialSizeHasBeenSet;
+    const uintptr_t fOurWindowId;
 
 public:
     IldaeilUI()
         : UI(1280, 720),
+          Thread("IldaeilScanner"),
+          fDrawingState(kDrawingInit),
           fPlugin((IldaeilPlugin*)getPluginInstancePointer()),
-          // fResizeHandle(this),
           fPluginCount(0),
           fPluginSelected(0),
-          fHostWindowLookingToResize(0)
+          fPlugins(nullptr),
+          fPluginSearchActive(false),
+          fInitialSizeHasBeenSet(false),
+          fOurWindowId(getWindow().getNativeWindowHandle())
     {
-        using namespace CarlaBackend;
-
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
+        {
+            fDrawingState = kDrawingError;
             return;
+        }
+
+        fPlugin->setUI(this);
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
 
         if (carla_get_current_plugin_count(handle) != 0)
         {
-            const CarlaPluginInfo* const info = carla_get_plugin_info(handle, 0);
-
-            if (info->hints & PLUGIN_HAS_CUSTOM_UI) // FIXME use PLUGIN_HAS_CUSTOM_EMBED_UI
-            {
-                const uintptr_t winId = getWindow().getNativeWindowHandle();
-                carla_embed_custom_ui(handle, 0, (void*)winId);
-
-                fHostWindowLookingToResize = (::Window)winId;
-                tryResizingToChildWindowContent();
-            }
+            showPluginUI(handle);
+            return;
         }
 
-        // start cache/lookup, maybe spawn thread for this?
-        fPluginCount = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr);
-        for (uint i=0; i<fPluginCount; ++i)
-            carla_get_cached_plugin_info(PLUGIN_LV2, i);
+        std::strcpy(fPluginSearchString, "Search...");
     }
 
     ~IldaeilUI() override
     {
-        if (fPlugin != nullptr)
-        {
-            fPlugin->fUI = nullptr;
+        if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
+            return;
 
-            if (fPlugin->fCarlaHostHandle != nullptr)
-                carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
+        stopThread(-1);
+
+        fPlugin->fUI = nullptr;
+
+        if (fDrawingState == kDrawingPluginCustomUI)
+            carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
+
+        delete[] fPlugins;
+    }
+
+    void showPluginUI(const CarlaHostHandle handle)
+    {
+        const CarlaPluginInfo* const info = carla_get_plugin_info(handle, 0);
+
+        if (info->hints & PLUGIN_HAS_CUSTOM_UI) // FIXME use PLUGIN_HAS_CUSTOM_EMBED_UI
+        {
+            // carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
+            carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
+
+            carla_embed_custom_ui(handle, 0, (void*)fOurWindowId);
+
+            // tryResizingToChildWindowContent();
+            fDrawingState = kDrawingPluginCustomUI;
         }
+    }
+
+protected:
+    void uiIdle() override
+    {
+        switch (fDrawingState)
+        {
+        case kDrawingPluginCustomUI:
+            break;
+        case kDrawingInit:
+            fDrawingState = kDrawingLoading;
+            startThread();
+            repaint();
+            return;
+        default:
+            return;
+        }
+
+        fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
+
+        if (! fInitialSizeHasBeenSet)
+            tryResizingToChildWindowContent();
+    }
+
+    void run() override
+    {
+        fPluginCount = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr);
+
+        if (fPluginCount != 0)
+        {
+            fPlugins = new CarlaCachedPluginInfo[fPluginCount];
+
+            for (uint i=0; i < fPluginCount && !shouldThreadExit(); ++i)
+            {
+                std::memcpy(&fPlugins[i], carla_get_cached_plugin_info(PLUGIN_LV2, i), sizeof(CarlaCachedPluginInfo));
+                // TODO fix leaks
+                fPlugins[i].name = strdup(fPlugins[i].name);
+                fPlugins[i].label = strdup(fPlugins[i].label);
+            }
+        }
+
+        if (!shouldThreadExit())
+            fDrawingState = kDrawingPluginList;
     }
 
     void onImGuiDisplay() override
     {
-        if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
+        switch (fDrawingState)
+        {
+        case kDrawingPluginList:
+            break;
+        case kDrawingError:
+            // TODO display error message
             return;
+        case kDrawingLoading:
+            // TODO display loading message
+            return;
+        default:
+            return;
+        }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
-
-        if (carla_get_current_plugin_count(handle) != 0)
-            return;
 
         float width = getWidth();
         float height = getHeight();
@@ -123,37 +208,28 @@ public:
 
         if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoResize))
         {
-            static char searchBuf[0xff] = "Search...";
-            ImGui::InputText("", searchBuf, sizeof(searchBuf)-1, ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_AutoSelectAll);
-
-            using namespace CarlaBackend;
+            if (ImGui::InputText("", fPluginSearchString, sizeof(fPluginSearchString)-1, ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_AutoSelectAll))
+                fPluginSearchActive = true;
 
             if (ImGui::Button("Load Plugin"))
             {
                 do {
-                    const CarlaCachedPluginInfo* info = carla_get_cached_plugin_info(PLUGIN_LV2, fPluginSelected);
-                    DISTRHO_SAFE_ASSERT_BREAK(info != nullptr);
+                    const CarlaCachedPluginInfo& info(fPlugins[fPluginSelected]);
 
-                    const char* const slash = std::strchr(info->label, DISTRHO_OS_SEP);
+                    const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
                     DISTRHO_SAFE_ASSERT_BREAK(slash != nullptr);
 
-                    d_stdout("Loading %s...", info->name);
+                    d_stdout("Loading %s...", info.name);
 
                     if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_LV2, nullptr, nullptr,
                                          slash+1, 0, 0x0, PLUGIN_OPTIONS_NULL))
                     {
-                        const CarlaPluginInfo* const info = carla_get_plugin_info(handle, 0);
-
-                        if (info->hints & PLUGIN_HAS_CUSTOM_UI) // FIXME use PLUGIN_HAS_CUSTOM_EMBED_UI
-                        {
-                            const uintptr_t winId = getWindow().getNativeWindowHandle();
-                            carla_embed_custom_ui(handle, 0, (void*)winId);
-
-                            fHostWindowLookingToResize = (::Window)winId;
-                            tryResizingToChildWindowContent();
-                        }
-
+                        showPluginUI(handle);
                         repaint();
+
+                        delete[] fPlugins;
+                        fPlugins = nullptr;
+                        fPluginCount = 0;
                     }
 
                 } while (false);
@@ -168,46 +244,44 @@ public:
                     ImGui::TableSetupColumn("URI");
                     ImGui::TableHeadersRow();
 
-                    const char* const search = searchBuf[0] != 0 && std::strcmp(searchBuf, "Search...") != 0 ? searchBuf : nullptr;
+                    const char* const search = fPluginSearchActive && fPluginSearchString[0] != '\0' ? fPluginSearchString : nullptr;
 
-                    if (fPluginCount != 0)
+                    for (uint i=0; i<fPluginCount; ++i)
                     {
-                        for (uint i=0; i<fPluginCount; ++i)
-                        {
-                            const CarlaCachedPluginInfo* info = carla_get_cached_plugin_info(PLUGIN_LV2, i);
-                            DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
+                        const CarlaCachedPluginInfo& info(fPlugins[i]);
 
-                           #if DISTRHO_PLUGIN_IS_SYNTH
-                            if (info->midiIns != 1 || info->audioOuts != 2)
-                                continue;
-                           #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-                            if (info->midiIns != 1 || info->midiOuts != 1)
-                                continue;
-                            if (info->audioIns != 0 || info->audioOuts != 0)
-                                continue;
-                           #else
-                            if (info->audioIns != 2 || info->audioOuts != 2)
-                                continue;
-                           #endif
+                        /*
+                        #if DISTRHO_PLUGIN_IS_SYNTH
+                        if (info.midiIns != 1 || info.audioOuts != 2)
+                            continue;
+                        #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+                        if (info.midiIns != 1 || info.midiOuts != 1)
+                            continue;
+                        if (info.audioIns != 0 || info.audioOuts != 0)
+                            continue;
+                        #else
+                        if (info.audioIns != 2 || info.audioOuts != 2)
+                            continue;
+                        #endif
+                        */
 
-                            const char* const slash = std::strchr(info->label, DISTRHO_OS_SEP);
-                            DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
+                        const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
+                        DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
 
-                            if (search != nullptr && strcasestr(info->name, search) == nullptr)
-                                continue;
+                        // if (search != nullptr && strcasestr(info.name, search) == nullptr)
+                        //     continue;
 
-                            bool selected = fPluginSelected == i;
-                            ImGui::TableNextRow();
-                            ImGui::TableSetColumnIndex(0);
-                            ImGui::Selectable(info->name, &selected);
-                            ImGui::TableSetColumnIndex(1);
-                            ImGui::Selectable(slash+1, &selected);
-                            ImGui::TableSetColumnIndex(2);
-                            ImGui::TextUnformatted(info->label, slash);
+                        bool selected = fPluginSelected == i;
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Selectable(info.name, &selected);
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Selectable(slash+1, &selected);
+                        ImGui::TableSetColumnIndex(2);
+                        ImGui::TextUnformatted(info.label, slash);
 
-                            if (selected)
-                                fPluginSelected = i;
-                        }
+                        if (selected)
+                            fPluginSelected = i;
                     }
 
                     ImGui::EndTable();
@@ -219,82 +293,16 @@ public:
         ImGui::End();
     }
 
-    void uiIdle() override
-    {
-        if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
-            return;
-
-        fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
-
-        if (fHostWindowLookingToResize == 0)
-            return;
-        tryResizingToChildWindowContent();
-    }
-
 private:
     void tryResizingToChildWindowContent()
     {
-        if (::Display* const display = XOpenDisplay(nullptr))
+        const Size<uint> size(getChildWindowSize(fOurWindowId));
+
+        if (size.isValid())
         {
-            if (const ::Window childWindow = getChildWindow(display, fHostWindowLookingToResize))
-            {
-                d_stdout("found child window");
-
-                XSizeHints sizeHints;
-                memset(&sizeHints, 0, sizeof(sizeHints));
-
-                if (XGetNormalHints(display, childWindow, &sizeHints))
-                {
-                    int width = 0;
-                    int height = 0;
-
-                    if (sizeHints.flags & PSize)
-                    {
-                        width = sizeHints.width;
-                        height = sizeHints.height;
-                    }
-                    else if (sizeHints.flags & PBaseSize)
-                    {
-                        width = sizeHints.base_width;
-                        height = sizeHints.base_height;
-                    }
-                    else if (sizeHints.flags & PMinSize)
-                    {
-                        width = sizeHints.min_width;
-                        height = sizeHints.min_height;
-                    }
-
-                    d_stdout("child window bounds %u %u", width, height);
-
-                    if (width > 1 && height > 1)
-                    {
-                        fHostWindowLookingToResize = 0;
-                        setSize(static_cast<uint>(width), static_cast<uint>(height));
-                    }
-                }
-                else
-                    d_stdout("child window without bounds");
-            }
-
-            XCloseDisplay(display);
+            fInitialSizeHasBeenSet = true;
+            setSize(size);
         }
-    }
-
-    ::Window getChildWindow(::Display* const display, const ::Window hostWindow) const
-    {
-        ::Window rootWindow, parentWindow, ret = 0;
-        ::Window* childWindows = nullptr;
-        uint numChildren = 0;
-
-        XQueryTree(display, hostWindow, &rootWindow, &parentWindow, &childWindows, &numChildren);
-
-        if (numChildren > 0 && childWindows != nullptr)
-        {
-            ret = childWindows[0];
-            XFree(childWindows);
-        }
-
-        return ret;
     }
 
 protected:
@@ -305,7 +313,7 @@ protected:
       A parameter has changed on the plugin side.
       This is called by the host to inform the UI about parameter changes.
     */
-    void parameterChanged(uint32_t index, float value) override
+    void parameterChanged(uint32_t, float) override
     {
     }
 

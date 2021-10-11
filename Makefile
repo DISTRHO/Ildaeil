@@ -6,14 +6,17 @@
 
 include dpf/Makefile.base.mk
 
-all: dgl plugins gen
+all: carla dgl plugins gen
 
 # --------------------------------------------------------------
+
+carla:
+	$(MAKE) -C carla plugin HAVE_ALSA=false HAVE_DGL=false HAVE_HYLIA=false HAVE_JACK=false HAVE_LIBLO=false HAVE_PYQT=false HAVE_QT4=false HAVE_QT5=false HAVE_QT5PKG=false HAVE_PULSEAUDIO=false USING_JUCE_AUDIO_DEVICES=false
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
 
-plugins: dgl
+plugins: carla dgl
 	$(MAKE) all -C plugins/FX
 
 ifneq ($(CROSS_COMPILING),true)
@@ -32,6 +35,7 @@ endif
 # --------------------------------------------------------------
 
 clean:
+	$(MAKE) clean -C carla
 	$(MAKE) clean -C dpf/dgl
 	$(MAKE) clean -C dpf/utils/lv2-ttl-generator
 	$(MAKE) clean -C plugins/FX
@@ -39,4 +43,4 @@ clean:
 
 # --------------------------------------------------------------
 
-.PHONY: plugins
+.PHONY: carla plugins
