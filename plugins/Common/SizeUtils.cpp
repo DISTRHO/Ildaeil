@@ -34,13 +34,13 @@ START_NAMESPACE_DGL
 #elif defined(DISTRHO_OS_MAC)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
-::Window getChildWindow(::Display* const display, const ::Window hostWindow) const
+static ::Window getChildWindow(::Display* const display, const ::Window ourWindow)
 {
     ::Window rootWindow, parentWindow, ret = 0;
     ::Window* childWindows = nullptr;
     uint numChildren = 0;
 
-    XQueryTree(display, hostWindow, &rootWindow, &parentWindow, &childWindows, &numChildren);
+    XQueryTree(display, ourWindow, &rootWindow, &parentWindow, &childWindows, &numChildren);
 
     if (numChildren > 0 && childWindows != nullptr)
     {
@@ -66,7 +66,7 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
 #else
     if (::Display* const display = XOpenDisplay(nullptr))
     {
-        if (const ::Window childWindow = getChildWindow(display, fOurWindowLookingToResize))
+        if (const ::Window childWindow = getChildWindow(display, (::Window)winId))
         {
             d_stdout("found child window");
 
@@ -97,7 +97,12 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
                 d_stdout("child window bounds %u %u", width, height);
 
                 if (width > 1 && height > 1)
+                {
+                    // XMoveWindow(display, (::Window)winId, 0, 40);
+                    // XResizeWindow(display, (::Window)winId, width, height);
+                    // XMoveWindow(display, childWindow, 0, 40);
                     return Size<uint>(static_cast<uint>(width), static_cast<uint>(height));
+                }
             }
             else
                 d_stdout("child window without bounds");

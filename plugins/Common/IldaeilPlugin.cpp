@@ -42,7 +42,7 @@ public:
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
 
-    NativeTimeInfo fCarlaTimeInfo;
+    mutable NativeTimeInfo fCarlaTimeInfo;
 
     UI* fUI;
 
@@ -100,7 +100,7 @@ public:
             fCarlaPluginDescriptor->cleanup(fCarlaPluginHandle);
     }
 
-    const NativeTimeInfo* getTimeInfo()
+    const NativeTimeInfo* hostGetTimeInfo() const noexcept
     {
         const TimePosition& timePos(getTimePosition());
 
@@ -119,7 +119,25 @@ public:
         return &fCarlaTimeInfo;
     }
 
-    void resizeUI(const uint width, const uint height)
+#if DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+    bool hostWriteMidiEvent(const NativeMidiEvent* const event)
+    {
+        MidiEvent midiEvent;
+        midiEvent.frame = event->time;
+        midiEvent.size = event->size;
+        midiEvent.dataExt = nullptr;
+
+        uint32_t i = 0;
+        for (; i < event->size; ++i)
+            midiEvent.data[i] = event->data[i];
+        for (; i < MidiEvent::kDataSize; ++i)
+            midiEvent.data[i] = 0;
+
+        return writeMidiEvent(midiEvent);
+    }
+#endif
+
+    void hostResizeUI(const uint width, const uint height)
     {
         DISTRHO_SAFE_ASSERT_RETURN(fUI != nullptr,);
 
@@ -262,29 +280,37 @@ static bool host_is_offline(NativeHostHandle)
     return false;
 }
 
-static const NativeTimeInfo* host_get_time_info(NativeHostHandle handle)
+static const NativeTimeInfo* host_get_time_info(const NativeHostHandle handle)
 {
-    return static_cast<IldaeilPlugin*>(handle)->getTimeInfo();
+    return static_cast<IldaeilPlugin*>(handle)->hostGetTimeInfo();
 }
 
-static bool host_write_midi_event(NativeHostHandle handle, const NativeMidiEvent* event)
+static bool host_write_midi_event(const NativeHostHandle handle, const NativeMidiEvent* const event)
 {
-    return false;
+#if DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+    return static_cast<IldaeilPlugin*>(handle)->hostWriteMidiEvent(event);
+#else
+    return handle != nullptr && event != nullptr && false;
+#endif
 }
 
-static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpcode opcode,
-                                int32_t index, intptr_t value, void* ptr, float opt)
+static intptr_t host_dispatcher(const NativeHostHandle handle, const NativeHostDispatcherOpcode opcode,
+                                const int32_t index, const intptr_t value, void* const ptr, const float opt)
 {
     switch (opcode)
     {
     case NATIVE_HOST_OPCODE_UI_RESIZE:
-        static_cast<IldaeilPlugin*>(handle)->resizeUI(index, value);
+        static_cast<IldaeilPlugin*>(handle)->hostResizeUI(index, value);
         break;
     default:
         break;
     }
 
     return 0;
+
+    // unused
+    (void)ptr;
+    (void)opt;
 }
 
 /* ------------------------------------------------------------------------------------------------------------
