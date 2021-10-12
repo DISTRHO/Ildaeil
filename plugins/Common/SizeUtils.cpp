@@ -70,14 +70,22 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
         {
             d_stdout("found child window");
 
+            XWindowAttributes attrs;
+            memset(&attrs, 0, sizeof(attrs));
+
             XSizeHints sizeHints;
             memset(&sizeHints, 0, sizeof(sizeHints));
 
-            if (XGetNormalHints(display, childWindow, &sizeHints))
-            {
-                int width = 0;
-                int height = 0;
+            int width = 0;
+            int height = 0;
 
+            if (XGetWindowAttributes(display, childWindow, &attrs))
+            {
+                width = attrs.width;
+                height = attrs.height;
+            }
+            else if (XGetNormalHints(display, childWindow, &sizeHints))
+            {
                 if (sizeHints.flags & PSize)
                 {
                     width = sizeHints.width;
@@ -88,25 +96,18 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
                     width = sizeHints.base_width;
                     height = sizeHints.base_height;
                 }
-                else if (sizeHints.flags & PMinSize)
-                {
-                    width = sizeHints.min_width;
-                    height = sizeHints.min_height;
-                }
-
-                d_stdout("child window bounds %u %u", width, height);
-
-                if (width > 1 && height > 1)
-                {
-                    // XMoveWindow(display, (::Window)winId, 0, 40);
-                    // XResizeWindow(display, (::Window)winId, width, height);
-                    // XMoveWindow(display, childWindow, 0, 40);
-                    // XMoveResizeWindow(display, childWindow, 0, 40, width, height);
-                    return Size<uint>(static_cast<uint>(width), static_cast<uint>(height));
-                }
             }
-            else
-                d_stdout("child window without bounds");
+
+            d_stdout("child window bounds %u %u", width, height);
+
+            if (width > 1 && height > 1)
+            {
+                // XMoveWindow(display, (::Window)winId, 0, 40);
+                // XResizeWindow(display, (::Window)winId, width, height);
+                // XMoveWindow(display, childWindow, 0, 40);
+                // XMoveResizeWindow(display, childWindow, 0, 40, width, height);
+                return Size<uint>(static_cast<uint>(width), static_cast<uint>(height));
+            }
         }
 
         XCloseDisplay(display);

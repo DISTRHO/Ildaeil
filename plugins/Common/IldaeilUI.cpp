@@ -98,6 +98,8 @@ public:
             return;
         }
 
+        std::strcpy(fPluginSearchString, "Search...");
+
         fPlugin->setUI(this);
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
@@ -105,10 +107,9 @@ public:
         if (carla_get_current_plugin_count(handle) != 0)
         {
             showPluginUI(handle);
+            startThread();
             return;
         }
-
-        std::strcpy(fPluginSearchString, "Search...");
     }
 
     ~IldaeilUI() override
@@ -173,22 +174,22 @@ protected:
 
     void run() override
     {
-        fPluginCount = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr);
-
-        if (fPluginCount != 0)
+        if (const uint count = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr))
         {
-            fPlugins = new CarlaCachedPluginInfo[fPluginCount];
+            fPlugins = new CarlaCachedPluginInfo[count];
 
-            for (uint i=0; i < fPluginCount && ! shouldThreadExit(); ++i)
+            for (uint i=0; i < count && ! shouldThreadExit(); ++i)
             {
                 std::memcpy(&fPlugins[i], carla_get_cached_plugin_info(PLUGIN_LV2, i), sizeof(CarlaCachedPluginInfo));
                 // TODO fix leaks
                 fPlugins[i].name = strdup(fPlugins[i].name);
                 fPlugins[i].label = strdup(fPlugins[i].label);
             }
+
+            fPluginCount = count;
         }
 
-        if (! shouldThreadExit())
+        if (fDrawingState == kDrawingLoading && ! shouldThreadExit())
             fDrawingState = kDrawingPluginList;
     }
 
@@ -196,6 +197,8 @@ protected:
     {
         switch (fDrawingState)
         {
+        case kDrawingInit:
+            break;
         case kDrawingPluginList:
             drawPluginList();
             break;
@@ -214,8 +217,6 @@ protected:
 
     void drawBottomBar()
     {
-        const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
-
         ImGui::SetNextWindowPos(ImVec2(0, getHeight() - kBottomHeight * getScaleFactor()));
         ImGui::SetNextWindowSize(ImVec2(getWidth(), kBottomHeight * getScaleFactor()));
 
@@ -298,7 +299,6 @@ protected:
                     {
                         const CarlaCachedPluginInfo& info(fPlugins[i]);
 
-                        /*
                         #if DISTRHO_PLUGIN_IS_SYNTH
                         if (info.midiIns != 1 || info.audioOuts != 2)
                             continue;
@@ -311,13 +311,12 @@ protected:
                         if (info.audioIns != 2 || info.audioOuts != 2)
                             continue;
                         #endif
-                        */
 
                         const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
                         DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
 
-                        // if (search != nullptr && strcasestr(info.name, search) == nullptr)
-                        //     continue;
+                        if (search != nullptr && strcasestr(info.name, search) == nullptr)
+                            continue;
 
                         bool selected = fPluginSelected == i;
                         ImGui::TableNextRow();
