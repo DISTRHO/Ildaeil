@@ -131,19 +131,21 @@ public:
     {
         const CarlaPluginInfo* const info = carla_get_plugin_info(handle, 0);
 
-        if (info->hints & PLUGIN_HAS_CUSTOM_UI) // FIXME use PLUGIN_HAS_CUSTOM_EMBED_UI
+        if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
             // carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
             carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
 
             carla_embed_custom_ui(handle, 0, (void*)fOurWindowId);
 
-            tryResizingToChildWindowContent();
             fDrawingState = kDrawingPluginCustomUI;
+            fInitialSizeHasBeenSet = false;
+            tryResizingToChildWindowContent();
         }
         else
         {
             // TODO query parameter information and store it
+            setSize(600, 400);
             fDrawingState = kDrawingPluginGenericUI;
         }
 
@@ -155,21 +157,24 @@ protected:
     {
         switch (fDrawingState)
         {
-        case kDrawingPluginCustomUI:
-            break;
         case kDrawingInit:
             fDrawingState = kDrawingLoading;
             startThread();
             repaint();
-            return;
+            break;
+
+        case kDrawingPluginCustomUI:
+            if (! fInitialSizeHasBeenSet)
+                tryResizingToChildWindowContent();
+            // fall-through
+
+        case kDrawingPluginGenericUI:
+            fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
+            break;
+
         default:
-            return;
+            break;
         }
-
-        fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
-
-        if (! fInitialSizeHasBeenSet)
-            tryResizingToChildWindowContent();
     }
 
     void run() override
@@ -206,10 +211,12 @@ protected:
             // TODO display error message
             break;
         case kDrawingLoading:
-            // TODO display loading message
+            drawLoading();
             break;
-        case kDrawingPluginCustomUI:
         case kDrawingPluginGenericUI:
+            drawGenericUI();
+            // fall-through
+        case kDrawingPluginCustomUI:
             drawBottomBar();
             break;
         }
@@ -224,26 +231,72 @@ protected:
         {
             if (ImGui::Button("Pick Another..."))
             {
-                if (fDrawingState == kDrawingPluginCustomUI)
+                if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
                     carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
                 fDrawingState = kDrawingPluginList;
                 setSize(kInitialWidth, kInitialHeight);
+                return ImGui::End();
+            }
+
+            if (fDrawingState == kDrawingPluginGenericUI)
+            {
+                ImGui::SameLine();
+
+                if (ImGui::Button("Show Custom GUI"))
+                {
+                    carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, true);
+                    return ImGui::End();
+                }
             }
         }
+
+        ImGui::End();
     }
 
-    void drawPluginList()
+    void setupMainWindowPos()
     {
-        const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
-        const bool pluginIsRunning = carla_get_current_plugin_count(handle) != 0;
-
         float width = getWidth();
         float height = getHeight();
         float margin = 20.0f;
 
+        if (fDrawingState == kDrawingPluginGenericUI)
+            height -= kBottomHeight * getScaleFactor();
+
         ImGui::SetNextWindowPos(ImVec2(margin, margin));
         ImGui::SetNextWindowSize(ImVec2(width - 2 * margin, height - 2 * margin));
+    }
+
+    void drawGenericUI()
+    {
+        setupMainWindowPos();
+
+        if (ImGui::Begin("Plugin Parameters", nullptr, ImGuiWindowFlags_NoResize))
+        {
+            ImGui::TextUnformatted("TODO :: here will go plugin parameters", nullptr);
+        }
+
+        ImGui::End();
+    }
+
+    void drawLoading()
+    {
+        setupMainWindowPos();
+
+        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoResize))
+        {
+            ImGui::TextUnformatted("Loading...", nullptr);
+        }
+
+        ImGui::End();
+    }
+
+    void drawPluginList()
+    {
+        setupMainWindowPos();
+
+        const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+        const bool pluginIsRunning = carla_get_current_plugin_count(handle) != 0;
 
         if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoResize))
         {
@@ -273,15 +326,22 @@ protected:
                         fPlugins = nullptr;
                         fPluginCount = 0;
                         */
+
+                        return ImGui::End();
                     }
 
                 } while (false);
             }
 
-            if (pluginIsRunning && ImGui::Button("Cancel"))
+            if (pluginIsRunning)
             {
-                showPluginUI(handle);
-                return;
+                ImGui::SameLine();
+
+                if (ImGui::Button("Cancel"))
+                {
+                    showPluginUI(handle);
+                    return ImGui::End();
+                }
             }
 
             if (ImGui::BeginChild("pluginlistwindow"))

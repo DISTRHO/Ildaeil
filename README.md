@@ -21,7 +21,10 @@ The current formats Ildaeil can work as are:
 - VST2
 - VST3
 
-And it can (in theory, later on) load the following plugin formats:
+And it can load the following plugin formats:
+- LV2
+
+Later on, in theory, should be able to load the following plugin formats:
 
 - JACK (applications as plugins, Linux only)
 - LADSPA
@@ -31,7 +34,7 @@ And it can (in theory, later on) load the following plugin formats:
 - VST3
 - AU (macOS only)
 
-Additionally the following files can be loaded:
+Additionally the following files could eventually be loaded:
 
 - Audio files (synced to host transport)
 - MIDI files (aligned to real/wall-clock time, synced to host transport)

@@ -24,6 +24,8 @@ START_NAMESPACE_DISTRHO
 
 // -----------------------------------------------------------------------------------------------------------
 
+using namespace CarlaBackend;
+
 static uint32_t host_get_buffer_size(NativeHostHandle);
 static double host_get_sample_rate(NativeHostHandle);
 static bool host_is_offline(NativeHostHandle);
@@ -65,7 +67,7 @@ public:
         memset(&fCarlaTimeInfo, 0, sizeof(fCarlaTimeInfo));
 
         fCarlaHostDescriptor.handle = this;
-        fCarlaHostDescriptor.resourceDir = "/Users/falktx/Source/Ildaeil"; // carla_get_library_folder();
+        fCarlaHostDescriptor.resourceDir = carla_get_library_folder();
         fCarlaHostDescriptor.uiName = "Ildaeil";
         fCarlaHostDescriptor.uiParentId = 0;
 
@@ -87,6 +89,9 @@ public:
         DISTRHO_SAFE_ASSERT_RETURN(fCarlaPluginHandle != nullptr,);
 
         fCarlaHostHandle = carla_create_native_plugin_host_handle(fCarlaPluginDescriptor, fCarlaPluginHandle);
+
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/usr/lib/carla");
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
     }
 
     ~IldaeilPlugin() override
