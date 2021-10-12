@@ -101,6 +101,7 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
                     // XMoveWindow(display, (::Window)winId, 0, 40);
                     // XResizeWindow(display, (::Window)winId, width, height);
                     // XMoveWindow(display, childWindow, 0, 40);
+                    // XMoveResizeWindow(display, childWindow, 0, 40, width, height);
                     return Size<uint>(static_cast<uint>(width), static_cast<uint>(height));
                 }
             }

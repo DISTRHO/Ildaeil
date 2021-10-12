@@ -54,6 +54,10 @@ using namespace CarlaBackend;
 
 class IldaeilUI : public UI, public Thread
 {
+    static constexpr const uint kInitialWidth = 1280;
+    static constexpr const uint kInitialHeight = 720;
+    static constexpr const uint kBottomHeight = 35;
+
     enum {
         kDrawingInit,
         kDrawingError,
@@ -77,7 +81,7 @@ class IldaeilUI : public UI, public Thread
 
 public:
     IldaeilUI()
-        : UI(1280, 720),
+        : UI(kInitialWidth, kInitialHeight),
           Thread("IldaeilScanner"),
           fDrawingState(kDrawingInit),
           fPlugin((IldaeilPlugin*)getPluginInstancePointer()),
@@ -133,9 +137,16 @@ public:
 
             carla_embed_custom_ui(handle, 0, (void*)fOurWindowId);
 
-            // tryResizingToChildWindowContent();
+            tryResizingToChildWindowContent();
             fDrawingState = kDrawingPluginCustomUI;
         }
+        else
+        {
+            // TODO query parameter information and store it
+            fDrawingState = kDrawingPluginGenericUI;
+        }
+
+        repaint();
     }
 
 protected:
@@ -168,7 +179,7 @@ protected:
         {
             fPlugins = new CarlaCachedPluginInfo[fPluginCount];
 
-            for (uint i=0; i < fPluginCount && !shouldThreadExit(); ++i)
+            for (uint i=0; i < fPluginCount && ! shouldThreadExit(); ++i)
             {
                 std::memcpy(&fPlugins[i], carla_get_cached_plugin_info(PLUGIN_LV2, i), sizeof(CarlaCachedPluginInfo));
                 // TODO fix leaks
@@ -177,7 +188,7 @@ protected:
             }
         }
 
-        if (!shouldThreadExit())
+        if (! shouldThreadExit())
             fDrawingState = kDrawingPluginList;
     }
 
@@ -186,18 +197,45 @@ protected:
         switch (fDrawingState)
         {
         case kDrawingPluginList:
+            drawPluginList();
             break;
         case kDrawingError:
             // TODO display error message
-            return;
+            break;
         case kDrawingLoading:
             // TODO display loading message
-            return;
-        default:
-            return;
+            break;
+        case kDrawingPluginCustomUI:
+        case kDrawingPluginGenericUI:
+            drawBottomBar();
+            break;
         }
+    }
 
+    void drawBottomBar()
+    {
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
+        ImGui::SetNextWindowPos(ImVec2(0, getHeight() - kBottomHeight * getScaleFactor()));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), kBottomHeight * getScaleFactor()));
+
+        if (ImGui::Begin("Current Plugin", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
+        {
+            if (ImGui::Button("Pick Another..."))
+            {
+                if (fDrawingState == kDrawingPluginCustomUI)
+                    carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
+
+                fDrawingState = kDrawingPluginList;
+                setSize(kInitialWidth, kInitialHeight);
+            }
+        }
+    }
+
+    void drawPluginList()
+    {
+        const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+        const bool pluginIsRunning = carla_get_current_plugin_count(handle) != 0;
 
         float width = getWidth();
         float height = getHeight();
@@ -213,6 +251,9 @@ protected:
 
             if (ImGui::Button("Load Plugin"))
             {
+                if (pluginIsRunning)
+                    carla_replace_plugin(handle, 0);
+
                 do {
                     const CarlaCachedPluginInfo& info(fPlugins[fPluginSelected]);
 
@@ -225,14 +266,21 @@ protected:
                                          slash+1, 0, 0x0, PLUGIN_OPTIONS_NULL))
                     {
                         showPluginUI(handle);
-                        repaint();
 
+                        /*
                         delete[] fPlugins;
                         fPlugins = nullptr;
                         fPluginCount = 0;
+                        */
                     }
 
                 } while (false);
+            }
+
+            if (pluginIsRunning && ImGui::Button("Cancel"))
+            {
+                showPluginUI(handle);
+                return;
             }
 
             if (ImGui::BeginChild("pluginlistwindow"))
@@ -296,11 +344,12 @@ protected:
 private:
     void tryResizingToChildWindowContent()
     {
-        const Size<uint> size(getChildWindowSize(fOurWindowId));
+        Size<uint> size(getChildWindowSize(fOurWindowId));
 
         if (size.isValid())
         {
             fInitialSizeHasBeenSet = true;
+            size.setHeight(size.getHeight() + kBottomHeight * getScaleFactor());
             setSize(size);
         }
     }
