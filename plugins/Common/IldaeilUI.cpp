@@ -181,7 +181,11 @@ protected:
     {
         if (const uint count = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr))
         {
+            fPluginCount = 0;
             fPlugins = new CarlaCachedPluginInfo[count];
+
+            if (fDrawingState == kDrawingLoading)
+                fDrawingState = kDrawingPluginList;
 
             for (uint i=0; i < count && ! shouldThreadExit(); ++i)
             {
@@ -189,13 +193,9 @@ protected:
                 // TODO fix leaks
                 fPlugins[i].name = strdup(fPlugins[i].name);
                 fPlugins[i].label = strdup(fPlugins[i].label);
+                ++fPluginCount;
             }
-
-            fPluginCount = count;
         }
-
-        if (fDrawingState == kDrawingLoading && ! shouldThreadExit())
-            fDrawingState = kDrawingPluginList;
     }
 
     void onImGuiDisplay() override
