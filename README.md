@@ -7,7 +7,7 @@ THIS IS CURRENTLY A WORK IN PROGRESS RESEARCH PROJECT.
 
 It is not known yet how well this can work, mostly testing waters here.  
 Currently the plugin will link against an internal [Carla](https://github.com/falkTX/Carla) for the plugin host part, embeding UIs if possible.  
-Audio and time information works, but there is no latency, MIDI, parameters or state handled right now.  
+Audio, MIDI and Time information works, but there is no latency, parameters or state handled right now.  
 Also, only LV2 hosting is enabled at the moment.
 
 ![screenshot](Screenshot.png "Ildaeil")
