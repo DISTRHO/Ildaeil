@@ -54,9 +54,11 @@ using namespace CarlaBackend;
 
 class IldaeilUI : public UI, public Thread
 {
-    static constexpr const uint kInitialWidth = 1220;
+    static constexpr const uint kInitialWidth  = 1220;
     static constexpr const uint kInitialHeight = 640;
-    static constexpr const uint kBottomHeight = 35;
+    static constexpr const uint kGenericWidth  = 600;
+    static constexpr const uint kGenericHeight = 400;
+    static constexpr const uint kExtraHeight   = 35;
 
     enum {
         kDrawingInit,
@@ -150,7 +152,8 @@ public:
         else
         {
             // TODO query parameter information and store it
-            setSize(600, 400);
+            const double scaleFactor = getScaleFactor();
+            setSize(kGenericWidth * scaleFactor, (kGenericHeight + kExtraHeight) * scaleFactor);
             fDrawingState = kDrawingPluginGenericUI;
         }
 
@@ -229,8 +232,8 @@ protected:
 
     void drawBottomBar()
     {
-        ImGui::SetNextWindowPos(ImVec2(0, getHeight() - kBottomHeight * getScaleFactor()));
-        ImGui::SetNextWindowSize(ImVec2(getWidth(), kBottomHeight * getScaleFactor()));
+        ImGui::SetNextWindowPos(ImVec2(0, getHeight() - kExtraHeight * getScaleFactor()));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), kExtraHeight * getScaleFactor()));
 
         if (ImGui::Begin("Current Plugin", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
@@ -264,10 +267,10 @@ protected:
     {
         float width = getWidth();
         float height = getHeight();
-        float margin = 20.0f;
+        float margin = 20.0f * getScaleFactor();
 
         if (fDrawingState == kDrawingPluginGenericUI)
-            height -= kBottomHeight * getScaleFactor();
+            height -= kExtraHeight * getScaleFactor();
 
         ImGui::SetNextWindowPos(ImVec2(margin, margin));
         ImGui::SetNextWindowSize(ImVec2(width - 2 * margin, height - 2 * margin));
@@ -414,7 +417,7 @@ private:
         if (size.isValid())
         {
             fInitialSizeHasBeenSet = true;
-            size.setHeight(size.getHeight() + kBottomHeight * getScaleFactor());
+            size.setHeight(size.getHeight() + kExtraHeight * getScaleFactor());
             setSize(size);
         }
     }
