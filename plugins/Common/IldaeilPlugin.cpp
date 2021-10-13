@@ -103,9 +103,8 @@ public:
 
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
         fMidiEvents = new NativeMidiEvent[kMaxMidiEventCount];
-        fDummyBuffer = new float[getBufferSize()];
-        fDummyBuffers[0] = fDummyBuffer;
-        fDummyBuffers[1] = fDummyBuffer;
+        // create dummy buffers
+        bufferSizeChanged(getBufferSize());
 #endif
     }
 
@@ -321,6 +320,7 @@ protected:
         fDummyBuffer = new float[newBufferSize];
         fDummyBuffers[0] = fDummyBuffer;
         fDummyBuffers[1] = fDummyBuffer;
+        std::memset(fDummyBuffer, 0, sizeof(float)*newBufferSize);
     }
 #endif
     // -------------------------------------------------------------------------------------------------------
