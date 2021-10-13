@@ -226,6 +226,8 @@ protected:
                 #if DISTRHO_PLUGIN_IS_SYNTH
                 if (info->midiIns != 1 || info->audioOuts != 2)
                     continue;
+                if ((info->hints & PLUGIN_IS_SYNTH) == 0x0)
+                    continue;
                 #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
                 if (info->midiIns != 1 || info->midiOuts != 1)
                     continue;
