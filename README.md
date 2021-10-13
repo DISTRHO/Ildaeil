@@ -10,6 +10,10 @@ Currently the plugin will link against an internal [Carla](https://github.com/fa
 Audio, MIDI and Time information works, but there is no latency, parameters or state handled right now.  
 Also, only LV2 hosting is enabled at the moment.
 
+Ildaeil basically works as a mini-wrapper around Carla, leveraging it for all its host support.
+
+The name comes from the korean 일대일, which means "one to one".
+
 ![screenshot](Screenshot.png "Ildaeil")
 
 ## Goals
@@ -40,7 +44,3 @@ Additionally the following files could eventually be loaded:
 - MIDI files (aligned to real/wall-clock time, synced to host transport)
 - SF2/3 files (through internal FluidSynth)
 - SFZ files (through internal SFZero)
-
-Ildaeil basically works as a mini-wrapper around Carla, leveraging it for all its host support.
-
-The name comes from the korean 일대일, which means "one to one".
