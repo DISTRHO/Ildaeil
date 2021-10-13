@@ -54,8 +54,8 @@ using namespace CarlaBackend;
 
 class IldaeilUI : public UI, public Thread
 {
-    static constexpr const uint kInitialWidth = 1280;
-    static constexpr const uint kInitialHeight = 720;
+    static constexpr const uint kInitialWidth = 1220;
+    static constexpr const uint kInitialHeight = 640;
     static constexpr const uint kBottomHeight = 35;
 
     enum {
@@ -101,6 +101,11 @@ public:
         std::strcpy(fPluginSearchString, "Search...");
 
         fPlugin->setUI(this);
+
+        const double scaleFactor = getScaleFactor();
+
+        if (d_isNotEqual(scaleFactor, 1.0))
+            setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
 
@@ -235,7 +240,8 @@ protected:
                     carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
                 fDrawingState = kDrawingPluginList;
-                setSize(kInitialWidth, kInitialHeight);
+                const double scaleFactor = getScaleFactor();
+                setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
                 return ImGui::End();
             }
 
