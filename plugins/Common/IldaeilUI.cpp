@@ -22,7 +22,6 @@
 #include "DistrhoUI.hpp"
 #include "DistrhoPlugin.hpp"
 #include "PluginHostWindow.hpp"
-#include "SizeUtils.hpp"
 #include "extra/Thread.hpp"
 
 START_NAMESPACE_DISTRHO
@@ -77,6 +76,7 @@ class IldaeilUI : public UI,
 
     uint fPluginCount;
     uint fPluginSelected;
+    bool fPluginScanningFinished;
     CarlaCachedPluginInfo* fPlugins;
 
     bool fPluginSearchActive;
@@ -91,6 +91,7 @@ public:
           fPluginHostWindow(getWindow(), this),
           fPluginCount(0),
           fPluginSelected(0),
+          fPluginScanningFinished(false),
           fPlugins(nullptr),
           fPluginSearchActive(false)
     {
@@ -138,11 +139,8 @@ public:
         stopThread(-1);
 
         fPlugin->fUI = nullptr;
+        hidePluginUI(fPlugin->fCarlaHostHandle);
 
-        if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
-            carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
-
-        fPluginHostWindow.detach();
         delete[] fPlugins;
     }
 
@@ -164,6 +162,14 @@ public:
         }
 
         repaint();
+    }
+
+    void hidePluginUI(const CarlaHostHandle handle)
+    {
+        if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
+            carla_show_custom_ui(handle, 0, false);
+
+        fPluginHostWindow.hide();
     }
 
 protected:
@@ -215,6 +221,9 @@ protected:
                 ++fPluginCount;
             }
         }
+
+        if (! shouldThreadExit())
+            fPluginScanningFinished = true;
     }
 
     void onImGuiDisplay() override
@@ -250,8 +259,7 @@ protected:
         {
             if (ImGui::Button("Pick Another..."))
             {
-                if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
-                    carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
+                hidePluginUI(fPlugin->fCarlaHostHandle);
 
                 fDrawingState = kDrawingPluginList;
                 const double scaleFactor = getScaleFactor();
@@ -276,22 +284,24 @@ protected:
 
     void setupMainWindowPos()
     {
-        float width = getWidth();
+        float y = 0;
         float height = getHeight();
-        float margin = 20.0f * getScaleFactor();
 
         if (fDrawingState == kDrawingPluginGenericUI)
-            height -= kExtraHeight * getScaleFactor();
+        {
+            y = (kExtraHeight - 1) * getScaleFactor();
+            height -= y;
+        }
 
-        ImGui::SetNextWindowPos(ImVec2(margin, margin));
-        ImGui::SetNextWindowSize(ImVec2(width - 2 * margin, height - 2 * margin));
+        ImGui::SetNextWindowPos(ImVec2(0, y));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), height));
     }
 
     void drawGenericUI()
     {
         setupMainWindowPos();
 
-        if (ImGui::Begin("Plugin Parameters", nullptr, ImGuiWindowFlags_NoResize))
+        if (ImGui::Begin("Plugin Parameters", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
             ImGui::TextUnformatted("TODO :: here will go plugin parameters", nullptr);
         }
@@ -303,7 +313,7 @@ protected:
     {
         setupMainWindowPos();
 
-        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoResize))
+        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
             ImGui::TextUnformatted("Loading...", nullptr);
         }
@@ -318,15 +328,20 @@ protected:
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
         const bool pluginIsRunning = carla_get_current_plugin_count(handle) != 0;
 
-        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoResize))
+        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
             if (ImGui::InputText("", fPluginSearchString, sizeof(fPluginSearchString)-1, ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_AutoSelectAll))
                 fPluginSearchActive = true;
 
+            ImGui::BeginDisabled(!fPluginScanningFinished);
+
             if (ImGui::Button("Load Plugin"))
             {
                 if (pluginIsRunning)
+                {
+                    hidePluginUI(handle);
                     carla_replace_plugin(handle, 0);
+                }
 
                 do {
                     const CarlaCachedPluginInfo& info(fPlugins[fPluginSelected]);
@@ -352,6 +367,8 @@ protected:
 
                 } while (false);
             }
+
+            ImGui::EndDisabled();
 
             if (pluginIsRunning)
             {

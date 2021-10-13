@@ -4,3 +4,4 @@
 ../../dpf-widgets/generic
 ../../dpf-widgets/opengl
 /usr/include/carla
+/usr/include/carla/includes

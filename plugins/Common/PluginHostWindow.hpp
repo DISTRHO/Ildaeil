@@ -15,6 +15,8 @@
  * For a full copy of the GNU General Public License see the LICENSE file.
  */
 
+#pragma once
+
 #include "Window.hpp"
 
 START_NAMESPACE_DGL
@@ -34,7 +36,7 @@ public:
     ~PluginHostWindow();
 
     void* attachAndGetWindowHandle();
-    void detach();
+    void hide();
     void idle();
     void setPositionAndSize(uint x, uint y, uint width, uint height);
 };

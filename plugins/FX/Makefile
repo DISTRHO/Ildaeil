@@ -18,7 +18,6 @@ FILES_DSP = \
 FILES_UI = \
 	IldaeilUI.cpp \
 	../Common/PluginHostWindow.cpp \
-	../Common/SizeUtils.cpp \
 	../../dpf-widgets/opengl/DearImGui.cpp
 
 # --------------------------------------------------------------
