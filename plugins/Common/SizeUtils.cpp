@@ -56,12 +56,14 @@ Size<uint> getChildWindowSize(const uintptr_t winId)
 {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
+    /*
     for (NSView* subview in [(NSView*)winId subviews])
     {
         // [subview setFrame:NSMakeRect(0, 0, width, height)];
         d_stdout("found subview");
         return Size<uint>(subview.frame.size.width, subview.frame.size.height);
     }
+    */
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
     if (::Display* const display = XOpenDisplay(nullptr))

@@ -17,6 +17,7 @@ FILES_DSP = \
 
 FILES_UI = \
 	IldaeilUI.cpp \
+	../Common/PluginHostWindow.cpp \
 	../Common/SizeUtils.cpp \
 	../../dpf-widgets/opengl/DearImGui.cpp
 
@@ -65,6 +66,7 @@ BUILD_CXX_FLAGS += -I../../carla/source/backend
 BUILD_CXX_FLAGS += -I../../carla/source/includes
 
 ifeq ($(MACOS),true)
+$(BUILD_DIR)/../Common/PluginHostWindow.cpp.o: BUILD_CXX_FLAGS += -ObjC++
 $(BUILD_DIR)/../Common/SizeUtils.cpp.o: BUILD_CXX_FLAGS += -ObjC++
 LINK_FLAGS += -framework AppKit
 LINK_FLAGS += -framework Accelerate

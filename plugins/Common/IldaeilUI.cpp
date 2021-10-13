@@ -21,6 +21,7 @@
 
 #include "DistrhoUI.hpp"
 #include "DistrhoPlugin.hpp"
+#include "PluginHostWindow.hpp"
 #include "SizeUtils.hpp"
 #include "extra/Thread.hpp"
 
@@ -52,7 +53,9 @@ using namespace CarlaBackend;
 // shared resource pointer
 // carla_juce_init();
 
-class IldaeilUI : public UI, public Thread
+class IldaeilUI : public UI,
+                  public Thread,
+                  public PluginHostWindow::Callbacks
 {
     static constexpr const uint kInitialWidth  = 1220;
     static constexpr const uint kInitialHeight = 640;
@@ -70,6 +73,7 @@ class IldaeilUI : public UI, public Thread
     } fDrawingState;
 
     IldaeilPlugin* const fPlugin;
+    PluginHostWindow fPluginHostWindow;
 
     uint fPluginCount;
     uint fPluginSelected;
@@ -78,21 +82,17 @@ class IldaeilUI : public UI, public Thread
     bool fPluginSearchActive;
     char fPluginSearchString[0xff];
 
-    bool fInitialSizeHasBeenSet;
-    const uintptr_t fOurWindowId;
-
 public:
     IldaeilUI()
         : UI(kInitialWidth, kInitialHeight),
           Thread("IldaeilScanner"),
           fDrawingState(kDrawingInit),
           fPlugin((IldaeilPlugin*)getPluginInstancePointer()),
+          fPluginHostWindow(getWindow(), this),
           fPluginCount(0),
           fPluginSelected(0),
           fPlugins(nullptr),
-          fPluginSearchActive(false),
-          fInitialSizeHasBeenSet(false),
-          fOurWindowId(getWindow().getNativeWindowHandle())
+          fPluginSearchActive(false)
     {
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
         {
@@ -107,9 +107,20 @@ public:
         const double scaleFactor = getScaleFactor();
 
         if (d_isNotEqual(scaleFactor, 1.0))
+        {
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
+            fPluginHostWindow.setPositionAndSize(0, kExtraHeight * scaleFactor,
+                                                 kInitialWidth * scaleFactor, (kInitialHeight - kExtraHeight) * scaleFactor);
+        }
+        else
+        {
+            fPluginHostWindow.setPositionAndSize(0, kExtraHeight, kInitialWidth, kInitialHeight-kExtraHeight);
+        }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
+        // carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
+        carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
 
         if (carla_get_current_plugin_count(handle) != 0)
         {
@@ -128,9 +139,10 @@ public:
 
         fPlugin->fUI = nullptr;
 
-        if (fDrawingState == kDrawingPluginCustomUI)
+        if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
             carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
+        fPluginHostWindow.detach();
         delete[] fPlugins;
     }
 
@@ -140,14 +152,8 @@ public:
 
         if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
-            // carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
-            carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
-
-            carla_embed_custom_ui(handle, 0, (void*)fOurWindowId);
-
             fDrawingState = kDrawingPluginCustomUI;
-            fInitialSizeHasBeenSet = false;
-            tryResizingToChildWindowContent();
+            carla_embed_custom_ui(handle, 0, fPluginHostWindow.attachAndGetWindowHandle());
         }
         else
         {
@@ -161,6 +167,11 @@ public:
     }
 
 protected:
+    void pluginWindowResized(uint width, uint height) override
+    {
+        setSize(width, height + kExtraHeight * getScaleFactor());
+    }
+
     void uiIdle() override
     {
         switch (fDrawingState)
@@ -172,9 +183,9 @@ protected:
             break;
 
         case kDrawingPluginCustomUI:
-            if (! fInitialSizeHasBeenSet)
-                tryResizingToChildWindowContent();
-            // fall-through
+            fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
+            fPluginHostWindow.idle();
+            break;
 
         case kDrawingPluginGenericUI:
             fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
@@ -225,14 +236,14 @@ protected:
             drawGenericUI();
             // fall-through
         case kDrawingPluginCustomUI:
-            drawBottomBar();
+            drawTopBar();
             break;
         }
     }
 
-    void drawBottomBar()
+    void drawTopBar()
     {
-        ImGui::SetNextWindowPos(ImVec2(0, getHeight() - kExtraHeight * getScaleFactor()));
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(getWidth(), kExtraHeight * getScaleFactor()));
 
         if (ImGui::Begin("Current Plugin", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
@@ -368,6 +379,7 @@ protected:
                     {
                         const CarlaCachedPluginInfo& info(fPlugins[i]);
 
+                        /*
                         #if DISTRHO_PLUGIN_IS_SYNTH
                         if (info.midiIns != 1 || info.audioOuts != 2)
                             continue;
@@ -380,6 +392,7 @@ protected:
                         if (info.audioIns != 2 || info.audioOuts != 2)
                             continue;
                         #endif
+                        */
 
                         const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
                         DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
@@ -407,19 +420,6 @@ protected:
         }
 
         ImGui::End();
-    }
-
-private:
-    void tryResizingToChildWindowContent()
-    {
-        Size<uint> size(getChildWindowSize(fOurWindowId));
-
-        if (size.isValid())
-        {
-            fInitialSizeHasBeenSet = true;
-            size.setHeight(size.getHeight() + kExtraHeight * getScaleFactor());
-            setSize(size);
-        }
     }
 
 protected:
