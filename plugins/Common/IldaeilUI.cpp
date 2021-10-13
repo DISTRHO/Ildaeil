@@ -17,8 +17,6 @@
 
 #include "CarlaNativePlugin.h"
 
-#include "../FX/DistrhoPluginInfo.h"
-
 #include "DistrhoUI.hpp"
 #include "DistrhoPlugin.hpp"
 #include "PluginHostWindow.hpp"
@@ -34,13 +32,6 @@ public:
 
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
-
-    UI* fUI;
-
-    void setUI(UI* const ui)
-    {
-        fUI = ui;
-    }
 
     // ...
 };
@@ -71,13 +62,28 @@ class IldaeilUI : public UI,
         kDrawingPluginGenericUI
     } fDrawingState;
 
+    struct PluginInfoCache {
+        char* name;
+        char* label;
+
+        PluginInfoCache()
+            : name(nullptr),
+              label(nullptr) {}
+
+        ~PluginInfoCache()
+        {
+            std::free(name);
+            std::free(label);
+        }
+    };
+
     IldaeilPlugin* const fPlugin;
     PluginHostWindow fPluginHostWindow;
 
     uint fPluginCount;
     uint fPluginSelected;
     bool fPluginScanningFinished;
-    CarlaCachedPluginInfo* fPlugins;
+    PluginInfoCache* fPlugins;
 
     bool fPluginSearchActive;
     char fPluginSearchString[0xff];
@@ -103,7 +109,7 @@ public:
 
         std::strcpy(fPluginSearchString, "Search...");
 
-        fPlugin->setUI(this);
+        // fPlugin->setUI(this);
 
         const double scaleFactor = getScaleFactor();
 
@@ -138,7 +144,7 @@ public:
 
         stopThread(-1);
 
-        fPlugin->fUI = nullptr;
+        // fPlugin->fUI = nullptr;
         hidePluginUI(fPlugin->fCarlaHostHandle);
 
         delete[] fPlugins;
@@ -207,17 +213,32 @@ protected:
         if (const uint count = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr))
         {
             fPluginCount = 0;
-            fPlugins = new CarlaCachedPluginInfo[count];
+            fPlugins = new PluginInfoCache[count];
 
             if (fDrawingState == kDrawingLoading)
                 fDrawingState = kDrawingPluginList;
 
-            for (uint i=0; i < count && ! shouldThreadExit(); ++i)
+            for (uint i=0, j; i < count && ! shouldThreadExit(); ++i)
             {
-                std::memcpy(&fPlugins[i], carla_get_cached_plugin_info(PLUGIN_LV2, i), sizeof(CarlaCachedPluginInfo));
-                // TODO fix leaks
-                fPlugins[i].name = strdup(fPlugins[i].name);
-                fPlugins[i].label = strdup(fPlugins[i].label);
+                const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(PLUGIN_LV2, i);
+                DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
+
+                #if DISTRHO_PLUGIN_IS_SYNTH
+                if (info->midiIns != 1 || info->audioOuts != 2)
+                    continue;
+                #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+                if (info->midiIns != 1 || info->midiOuts != 1)
+                    continue;
+                if (info->audioIns != 0 || info->audioOuts != 0)
+                    continue;
+                #else
+                if (info->audioIns != 2 || info->audioOuts != 2)
+                    continue;
+                #endif
+
+                j = fPluginCount;
+                fPlugins[j].name = strdup(info->name);
+                fPlugins[j].label = strdup(info->label);
                 ++fPluginCount;
             }
         }
@@ -344,7 +365,7 @@ protected:
                 }
 
                 do {
-                    const CarlaCachedPluginInfo& info(fPlugins[fPluginSelected]);
+                    const PluginInfoCache& info(fPlugins[fPluginSelected]);
 
                     const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
                     DISTRHO_SAFE_ASSERT_BREAK(slash != nullptr);
@@ -362,7 +383,7 @@ protected:
                         fPluginCount = 0;
                         */
 
-                        return ImGui::End();
+                        break;
                     }
 
                 } while (false);
@@ -377,7 +398,6 @@ protected:
                 if (ImGui::Button("Cancel"))
                 {
                     showPluginUI(handle);
-                    return ImGui::End();
                 }
             }
 
@@ -394,22 +414,7 @@ protected:
 
                     for (uint i=0; i<fPluginCount; ++i)
                     {
-                        const CarlaCachedPluginInfo& info(fPlugins[i]);
-
-                        /*
-                        #if DISTRHO_PLUGIN_IS_SYNTH
-                        if (info.midiIns != 1 || info.audioOuts != 2)
-                            continue;
-                        #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-                        if (info.midiIns != 1 || info.midiOuts != 1)
-                            continue;
-                        if (info.audioIns != 0 || info.audioOuts != 0)
-                            continue;
-                        #else
-                        if (info.audioIns != 2 || info.audioOuts != 2)
-                            continue;
-                        #endif
-                        */
+                        const PluginInfoCache& info(fPlugins[i]);
 
                         const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
                         DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);

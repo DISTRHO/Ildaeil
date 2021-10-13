@@ -18,7 +18,6 @@
 #include "CarlaNativePlugin.h"
 
 #include "DistrhoPlugin.hpp"
-#include "DistrhoUI.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -44,20 +43,28 @@ public:
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
 
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+    static constexpr const uint kMaxMidiEventCount = 512;
+    NativeMidiEvent* fMidiEvents;
+    uint32_t fMidiEventCount;
+    float* fDummyBuffer;
+    float* fDummyBuffers[2];
+#endif
+
     mutable NativeTimeInfo fCarlaTimeInfo;
 
-    UI* fUI;
-
-    void setUI(UI* const ui)
-    {
-        fUI = ui;
-    }
+    void* fUI;
 
     IldaeilPlugin()
         : Plugin(0, 0, 0),
           fCarlaPluginDescriptor(nullptr),
           fCarlaPluginHandle(nullptr),
           fCarlaHostHandle(nullptr),
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+          fMidiEvents(nullptr),
+          fMidiEventCount(0),
+          fDummyBuffer(nullptr),
+#endif
           fUI(nullptr)
     {
         fCarlaPluginDescriptor = carla_get_native_rack_plugin();
@@ -89,9 +96,17 @@ public:
         DISTRHO_SAFE_ASSERT_RETURN(fCarlaPluginHandle != nullptr,);
 
         fCarlaHostHandle = carla_create_native_plugin_host_handle(fCarlaPluginDescriptor, fCarlaPluginHandle);
+        DISTRHO_SAFE_ASSERT_RETURN(fCarlaHostHandle != nullptr,);
 
         carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/usr/lib/carla");
         carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
+
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+        fMidiEvents = new NativeMidiEvent[kMaxMidiEventCount];
+        fDummyBuffer = new float[getBufferSize()];
+        fDummyBuffers[0] = fDummyBuffer;
+        fDummyBuffers[1] = fDummyBuffer;
+#endif
     }
 
     ~IldaeilPlugin() override
@@ -99,6 +114,10 @@ public:
         if (fCarlaHostHandle != nullptr)
         {
             carla_host_handle_free(fCarlaHostHandle);
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+            delete[] fMidiEvents;
+            delete[] fDummyBuffer;
+#endif
         }
 
         if (fCarlaPluginHandle != nullptr)
@@ -146,8 +165,8 @@ public:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fUI != nullptr,);
 
-        d_stdout("resizing ui to %u %u", width, height);
-        fUI->setSize(width, height);
+        d_stdout("asking to resizing ui to %u %u - I SAY NO", width, height);
+        // fUI->setSize(width, height);
     }
 
 protected:
@@ -246,11 +265,47 @@ protected:
             fCarlaPluginDescriptor->deactivate(fCarlaPluginHandle);
     }
 
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+    void run(const float** inputs, float** outputs, uint32_t frames,
+             const MidiEvent* dpfMidiEvents, uint32_t dpfMidiEventCount) override
+#else
     void run(const float** inputs, float** outputs, uint32_t frames) override
+#endif
     {
         if (fCarlaPluginHandle != nullptr)
         {
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+            uint32_t midiEventCount = 0;
+            for (uint32_t i=0; i < dpfMidiEventCount; ++i)
+            {
+                const MidiEvent& dpfMidiEvent(dpfMidiEvents[i]);
+                if (dpfMidiEvent.size > 4)
+                    continue;
+
+                NativeMidiEvent& midiEvent(fMidiEvents[midiEventCount]);
+
+                midiEvent.time = dpfMidiEvent.frame;
+                midiEvent.port = 0;
+                midiEvent.size = dpfMidiEvent.size;
+                std::memcpy(midiEvent.data, dpfMidiEvent.data, midiEvent.size);
+
+                if (++midiEventCount == kMaxMidiEventCount)
+                    break;
+            }
+# if DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+            fCarlaPluginDescriptor->process(fCarlaPluginHandle, fDummyBuffers, fDummyBuffers, frames,
+                                            fMidiEvents, midiEventCount);
+            // unused
+            (void)outputs;
+# else
+            fCarlaPluginDescriptor->process(fCarlaPluginHandle, fDummyBuffers, outputs, frames,
+                                            fMidiEvents, midiEventCount);
+# endif
+            // unused
+            (void)inputs;
+#else
             fCarlaPluginDescriptor->process(fCarlaPluginHandle, (float**)inputs, outputs, frames, nullptr, 0);
+#endif
         }
         else
         {
@@ -259,9 +314,17 @@ protected:
         }
     }
 
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+    void bufferSizeChanged(const uint32_t newBufferSize) override
+    {
+        delete[] fDummyBuffer;
+        fDummyBuffer = new float[newBufferSize];
+        fDummyBuffers[0] = fDummyBuffer;
+        fDummyBuffers[1] = fDummyBuffer;
+    }
+#endif
     // -------------------------------------------------------------------------------------------------------
 
-private:
    /**
       Set our plugin class as non-copyable and add a leak detector just in case.
     */

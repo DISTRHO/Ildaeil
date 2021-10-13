@@ -7,25 +7,9 @@
 # --------------------------------------------------------------
 # Project name, used for binaries
 
-NAME = Ildaeil-FX
-
-# --------------------------------------------------------------
-# Files to build (DPF stuff)
-
-FILES_DSP = \
-	IldaeilPlugin.cpp
-
-FILES_UI = \
-	IldaeilUI.cpp
+NAME = Ildaeil-MIDI
 
 # --------------------------------------------------------------
 # Do some magic
 
-include ../../dpf/Makefile.plugins.mk
-
-# --------------------------------------------------------------
-# Enable all possible plugin types
-
-all: jack lv2 vst2 vst3
-
-# --------------------------------------------------------------
+include ../Common/Makefile.mk

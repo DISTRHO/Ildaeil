@@ -12,6 +12,7 @@ all: carla dgl plugins gen
 
 carla:
 	$(MAKE) -C carla plugin \
+		CAN_GENERATE_LV2_TTL=false \
 		HAVE_ALSA=false \
 		HAVE_DGL=false \
 		HAVE_HYLIA=false \
@@ -23,13 +24,15 @@ carla:
 		HAVE_QT5PKG=false \
 		HAVE_PULSEAUDIO=false \
 		USING_JUCE_AUDIO_DEVICES=false \
-		CAN_GENERATE_LV2_TTL=false
+		USING_RTAUDIO=false
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
 
 plugins: carla dgl
 	$(MAKE) all -C plugins/FX
+	$(MAKE) all -C plugins/MIDI
+	$(MAKE) all -C plugins/Synth
 
 ifneq ($(CROSS_COMPILING),true)
 gen: plugins dpf/utils/lv2_ttl_generator
@@ -51,7 +54,11 @@ clean:
 	$(MAKE) clean -C dpf/dgl
 	$(MAKE) clean -C dpf/utils/lv2-ttl-generator
 	$(MAKE) clean -C plugins/FX
+	$(MAKE) clean -C plugins/MIDI
+	$(MAKE) clean -C plugins/Synth
 	rm -rf bin build
+	rm -f dpf-widgets/opengl/*.d
+	rm -f dpf-widgets/opengl/*.o
 
 # --------------------------------------------------------------
 
