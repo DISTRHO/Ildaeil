@@ -16,6 +16,9 @@
  */
 
 #include "CarlaNativePlugin.h"
+#include "CarlaEngine.hpp"
+#include "water/streams/MemoryOutputStream.h"
+#include "water/xml/XmlDocument.h"
 
 #include "DistrhoPlugin.hpp"
 
@@ -52,11 +55,13 @@ public:
 #endif
 
     mutable NativeTimeInfo fCarlaTimeInfo;
+    mutable water::MemoryOutputStream fLastProjectState;
+    uint32_t fLastLatencyValue;
 
     void* fUI;
 
     IldaeilPlugin()
-        : Plugin(0, 0, 0),
+        : Plugin(0, 0, 1),
           fCarlaPluginDescriptor(nullptr),
           fCarlaPluginHandle(nullptr),
           fCarlaHostHandle(nullptr),
@@ -65,6 +70,7 @@ public:
           fMidiEventCount(0),
           fDummyBuffer(nullptr),
 #endif
+          fLastLatencyValue(0),
           fUI(nullptr)
     {
         fCarlaPluginDescriptor = carla_get_native_rack_plugin();
@@ -246,16 +252,72 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * Init */
 
+    void initState(const uint32_t index, String& stateKey, String& defaultStateValue) override
+    {
+        DISTRHO_SAFE_ASSERT_RETURN(index == 0,);
+
+        stateKey = "project";
+        defaultStateValue = ""
+        "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<!DOCTYPE CARLA-PROJECT>\n"
+        "<CARLA-PROJECT VERSION='" CARLA_VERSION_STRMIN "'>\n"
+        "</CARLA-PROJECT>\n";
+    }
+
    /* --------------------------------------------------------------------------------------------------------
     * Internal data */
 
+    String getState(const char* const key) const override
+    {
+        if (std::strcmp(key, "project") == 0)
+        {
+            CarlaEngine* const engine = carla_get_engine_from_handle(fCarlaHostHandle);
+
+            fLastProjectState.reset();
+            engine->saveProjectInternal(fLastProjectState);
+            return String(static_cast<char*>(fLastProjectState.getDataAndRelease()), false);
+        }
+
+        return String();
+    }
+
+    void setState(const char* const key, const char* const value) override
+    {
+        if (std::strcmp(key, "project") == 0)
+        {
+            CarlaEngine* const engine = carla_get_engine_from_handle(fCarlaHostHandle);
+
+            water::XmlDocument xml(value);
+            engine->loadProjectInternal(xml, true);
+        }
+    }
+
    /* --------------------------------------------------------------------------------------------------------
     * Process */
+
+    void checkLatencyChanged()
+    {
+        if (fCarlaHostHandle == nullptr)
+            return;
+
+        uint32_t latency = 0;
+
+        for (uint32_t i=0; i < carla_get_current_plugin_count(fCarlaHostHandle); ++i)
+            latency += carla_get_plugin_latency(fCarlaHostHandle, i);
+
+        if (fLastLatencyValue != latency)
+        {
+            fLastLatencyValue = latency;
+            setLatency(latency);
+        }
+    }
 
     void activate() override
     {
         if (fCarlaPluginHandle != nullptr)
             fCarlaPluginDescriptor->activate(fCarlaPluginHandle);
+
+        checkLatencyChanged();
     }
 
     void deactivate() override
@@ -305,6 +367,8 @@ protected:
 #else
             fCarlaPluginDescriptor->process(fCarlaPluginHandle, (float**)inputs, outputs, frames, nullptr, 0);
 #endif
+
+            checkLatencyChanged();
         }
         else
         {

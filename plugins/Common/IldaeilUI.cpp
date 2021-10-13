@@ -59,7 +59,8 @@ class IldaeilUI : public UI,
         kDrawingLoading,
         kDrawingPluginList,
         kDrawingPluginCustomUI,
-        kDrawingPluginGenericUI
+        kDrawingPluginGenericUI,
+        kDrawingPluginPendingFromInit
     } fDrawingState;
 
     struct PluginInfoCache {
@@ -130,22 +131,16 @@ public:
         carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
 
         if (carla_get_current_plugin_count(handle) != 0)
-        {
-            showPluginUI(handle);
-            startThread();
-            return;
-        }
+            fDrawingState = kDrawingPluginPendingFromInit;
     }
 
     ~IldaeilUI() override
     {
-        if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
-            return;
-
-        stopThread(-1);
+        if (isThreadRunning())
+            stopThread(-1);
 
         // fPlugin->fUI = nullptr;
-        hidePluginUI(fPlugin->fCarlaHostHandle);
+        hidePluginUI();
 
         delete[] fPlugins;
     }
@@ -161,19 +156,23 @@ public:
         }
         else
         {
+            fDrawingState = kDrawingPluginGenericUI;
             // TODO query parameter information and store it
             const double scaleFactor = getScaleFactor();
             setSize(kGenericWidth * scaleFactor, (kGenericHeight + kExtraHeight) * scaleFactor);
-            fDrawingState = kDrawingPluginGenericUI;
         }
 
         repaint();
     }
 
-    void hidePluginUI(const CarlaHostHandle handle)
+    void hidePluginUI()
     {
+
+        if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
+            return;
+
         if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
-            carla_show_custom_ui(handle, 0, false);
+            carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
         fPluginHostWindow.hide();
     }
@@ -192,6 +191,11 @@ protected:
             fDrawingState = kDrawingLoading;
             startThread();
             repaint();
+            break;
+
+        case kDrawingPluginPendingFromInit:
+            showPluginUI(fPlugin->fCarlaHostHandle);
+            startThread();
             break;
 
         case kDrawingPluginCustomUI:
@@ -254,15 +258,15 @@ protected:
         switch (fDrawingState)
         {
         case kDrawingInit:
+        case kDrawingLoading:
+        case kDrawingPluginPendingFromInit:
+            drawLoading();
             break;
         case kDrawingPluginList:
             drawPluginList();
             break;
         case kDrawingError:
             // TODO display error message
-            break;
-        case kDrawingLoading:
-            drawLoading();
             break;
         case kDrawingPluginGenericUI:
             drawGenericUI();
@@ -282,7 +286,7 @@ protected:
         {
             if (ImGui::Button("Pick Another..."))
             {
-                hidePluginUI(fPlugin->fCarlaHostHandle);
+                hidePluginUI();
 
                 fDrawingState = kDrawingPluginList;
                 const double scaleFactor = getScaleFactor();
@@ -362,7 +366,7 @@ protected:
             {
                 if (pluginIsRunning)
                 {
-                    hidePluginUI(handle);
+                    hidePluginUI();
                     carla_replace_plugin(handle, 0);
                 }
 
@@ -450,12 +454,14 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * DSP/Plugin Callbacks */
 
-   /**
-      A parameter has changed on the plugin side.
-      This is called by the host to inform the UI about parameter changes.
-    */
     void parameterChanged(uint32_t, float) override
     {
+    }
+
+    void stateChanged(const char* const key, const char* const) override
+    {
+        if (std::strcmp(key, "project") == 0)
+            hidePluginUI();
     }
 
     // -------------------------------------------------------------------------------------------------------

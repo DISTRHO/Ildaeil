@@ -2,5 +2,7 @@
 ../../dpf/distrho/
 ../../dpf-widgets/generic
 ../../dpf-widgets/opengl
-/usr/include/carla
-/usr/include/carla/includes
+../../carla/source/backend
+../../carla/source/includes
+../../carla/source/modules
+../../carla/source/utils
