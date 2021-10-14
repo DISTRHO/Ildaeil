@@ -3,16 +3,23 @@
 DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.  
 Load a VST2 plugin inside a LV2 host, or an LV2 plugin on a VST3 host, etc.
 
-THIS IS CURRENTLY A WORK IN PROGRESS RESEARCH PROJECT.
-
-It is not known yet how well this can work, mostly testing waters here.  
-Currently the plugin will link against an internal [Carla](https://github.com/falkTX/Carla) for the plugin host part, embeding UIs if possible.  
-Audio, MIDI, Latency and Time information and State save/loading works, but there are no parameters right now.
-Also, only LV2 hosting is enabled at the moment.
-
-Ildaeil basically works as a mini-wrapper around Carla, leveraging it for all its host support.
-
 The name comes from the korean 일대일, which means "one to one".
+
+THIS IS CURRENTLY A WORK IN PROGRESS.
+
+## Details
+
+Ildaeil basically works as a mini-wrapper around [Carla](https://github.com/falkTX/Carla), leveraging it for all its host support.  
+Everything should be working except plugin parameters (none are exposed to the host).  
+Also, **only LV2 hosting is enabled at the moment**.
+
+When open, Ildaeil will show a list of LV2 plugins to pick from.  
+Simply select one from the table and press "Load plugin".
+
+If the plugin provides an embedable UI, Ildaeil show will that by default, otherwise it shows a generic parameter list.  
+Toggling between generic vs custom/embed view is possible.  
+In the case of a plugin providing a custom UI that is not embedable, Ildaeil will show the generic view by default.
+You can press "Show Custom GUI" to open the plugin UI in an external window.
 
 ![screenshot](Screenshot.png "Ildaeil")
 
@@ -30,10 +37,8 @@ And it can load the following plugin formats:
 
 Later on, in theory, should be able to load the following plugin formats:
 
-- JACK (applications as plugins, Linux only)
 - LADSPA
 - DSSI
-- LV2
 - VST2
 - VST3
 - AU (macOS only)
