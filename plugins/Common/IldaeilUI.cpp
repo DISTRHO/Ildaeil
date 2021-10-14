@@ -61,9 +61,9 @@ class IldaeilUI : public UI,
 {
     static constexpr const uint kInitialWidth  = 1220;
     static constexpr const uint kInitialHeight = 640;
-    static constexpr const uint kGenericWidth  = 300;
+    static constexpr const uint kGenericWidth  = 360;
     static constexpr const uint kGenericHeight = 400;
-    static constexpr const uint kExtraHeight   = 35;
+    static constexpr const uint kButtonHeight  = 20;
 
     enum {
         kDrawingInit,
@@ -170,21 +170,23 @@ public:
 
         std::strcpy(fPluginSearchString, "Search...");
 
+        const double padding = ImGui::GetStyle().WindowPadding.y * 2;
         const double scaleFactor = getScaleFactor();
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
-            fPluginHostWindow.setPositionAndSize(0, kExtraHeight * scaleFactor,
-                                                 kInitialWidth * scaleFactor, (kInitialHeight - kExtraHeight) * scaleFactor);
+            fPluginHostWindow.setPositionAndSize(0, kButtonHeight * scaleFactor + padding,
+                                                 kInitialWidth * scaleFactor,
+                                                 (kInitialHeight - kButtonHeight) * scaleFactor - padding);
         }
         else
         {
-            fPluginHostWindow.setPositionAndSize(0, kExtraHeight, kInitialWidth, kInitialHeight-kExtraHeight);
+            fPluginHostWindow.setPositionAndSize(0, kButtonHeight + padding,
+                                                 kInitialWidth, kInitialHeight - kButtonHeight - padding);
         }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
-
 
         char winIdStr[24];
         std::snprintf(winIdStr, sizeof(winIdStr), "%lx", (ulong)getWindow().getNativeWindowHandle());
@@ -267,8 +269,9 @@ public:
                 createPluginGenericUI(handle, info);
             else
                 updatePluginGenericUI(handle);
+            ImGuiStyle& style(ImGui::GetStyle());
             const double scaleFactor = getScaleFactor();
-            setSize(kGenericWidth * scaleFactor, (kGenericHeight + kExtraHeight) * scaleFactor);
+            setSize(kGenericWidth * scaleFactor, (kGenericHeight + style.FramePadding.x) * scaleFactor);
         }
 
         repaint();
@@ -393,7 +396,7 @@ public:
 protected:
     void pluginWindowResized(uint width, uint height) override
     {
-        setSize(width, height + kExtraHeight * getScaleFactor());
+        setSize(width, height + kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2);
     }
 
     void uiIdle() override
@@ -501,10 +504,20 @@ protected:
 
     void drawTopBar()
     {
-        ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(getWidth(), kExtraHeight * getScaleFactor()));
+        const float padding = ImGui::GetStyle().WindowPadding.y * 2;
 
-        if (ImGui::Begin("Current Plugin", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), kButtonHeight * getScaleFactor() + padding));
+
+        const int flags = ImGuiWindowFlags_NoSavedSettings
+                        | ImGuiWindowFlags_NoTitleBar
+                        | ImGuiWindowFlags_NoResize
+                        | ImGuiWindowFlags_NoCollapse
+                        | ImGuiWindowFlags_NoScrollbar
+                        | ImGuiWindowFlags_NoScrollWithMouse
+                        | ImGuiWindowFlags_NoCollapse;
+
+        if (ImGui::Begin("Current Plugin", nullptr, flags))
         {
             const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
 
@@ -539,6 +552,9 @@ protected:
                     {
                         carla_show_custom_ui(handle, 0, true);
                     }
+
+                    ImGui::End();
+                    return;
                 }
             }
 
@@ -557,8 +573,9 @@ protected:
                         updatePluginGenericUI(handle);
 
                     const double scaleFactor = getScaleFactor();
+                    const double padding = ImGui::GetStyle().WindowPadding.y * 2;
                     setSize(std::max(getWidth(), static_cast<uint>(kGenericWidth * scaleFactor + 0.5)),
-                            (kGenericHeight + kExtraHeight) * scaleFactor);
+                            (kGenericHeight + kButtonHeight) * scaleFactor + padding);
                 }
             }
         }
@@ -573,7 +590,7 @@ protected:
 
         if (fDrawingState == kDrawingPluginGenericUI)
         {
-            y = (kExtraHeight - 1) * getScaleFactor();
+            y = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2 - 1;
             height -= y;
         }
 
@@ -715,8 +732,7 @@ protected:
             if (ImGui::BeginChild("pluginlistwindow"))
             {
                 if (ImGui::BeginTable("pluginlist",
-                                      fPluginType == PLUGIN_LV2 ? 3 : 2,
-                                      ImGuiTableFlags_NoSavedSettings|ImGuiTableFlags_NoClip))
+                                      fPluginType == PLUGIN_LV2 ? 3 : 2, ImGuiTableFlags_NoSavedSettings))
                 {
                     const char* const search = fPluginSearchActive && fPluginSearchString[0] != '\0' ? fPluginSearchString : nullptr;
 
