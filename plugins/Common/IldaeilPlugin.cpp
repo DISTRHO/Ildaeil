@@ -182,6 +182,10 @@ public:
     {
         switch (opcode)
         {
+        // cannnot be supported
+        case NATIVE_HOST_OPCODE_HOST_IDLE:
+            break;
+        // other stuff
         case NATIVE_HOST_OPCODE_NULL:
         case NATIVE_HOST_OPCODE_UPDATE_PARAMETER:
         case NATIVE_HOST_OPCODE_UPDATE_MIDI_PROGRAM:
@@ -189,7 +193,6 @@ public:
         case NATIVE_HOST_OPCODE_RELOAD_MIDI_PROGRAMS:
         case NATIVE_HOST_OPCODE_RELOAD_ALL:
         case NATIVE_HOST_OPCODE_UI_UNAVAILABLE:
-        case NATIVE_HOST_OPCODE_HOST_IDLE:
         case NATIVE_HOST_OPCODE_INTERNAL_PLUGIN:
         case NATIVE_HOST_OPCODE_QUEUE_INLINE_DISPLAY:
         case NATIVE_HOST_OPCODE_UI_TOUCH_PARAMETER:

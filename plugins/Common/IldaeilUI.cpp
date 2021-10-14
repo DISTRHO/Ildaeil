@@ -138,6 +138,7 @@ class IldaeilUI : public UI,
     bool fPluginScanningFinished;
     bool fPluginHasCustomUI;
     bool fPluginHasEmbedUI;
+    bool fPluginWillRunInBridgeMode;
     PluginInfoCache* fPlugins;
     ScopedPointer<PluginGenericUI> fPluginGenericUI;
 
@@ -157,6 +158,7 @@ public:
           fPluginScanningFinished(false),
           fPluginHasCustomUI(false),
           fPluginHasEmbedUI(false),
+          fPluginWillRunInBridgeMode(false),
           fPlugins(nullptr),
           fPluginSearchActive(false)
     {
@@ -374,6 +376,8 @@ public:
             hidePluginUI();
             carla_replace_plugin(handle, 0);
         }
+
+        carla_set_engine_option(handle, ENGINE_OPTION_PREFER_PLUGIN_BRIDGES, fPluginWillRunInBridgeMode, nullptr);
 
         if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
                              label, 0, 0x0, PLUGIN_OPTIONS_NULL))
@@ -692,6 +696,9 @@ protected:
                     }
                 } while (false);
             }
+
+            ImGui::SameLine();
+            ImGui::Checkbox("Run in bridge mode", &fPluginWillRunInBridgeMode);
 
             if (carla_get_current_plugin_count(handle) != 0)
             {
