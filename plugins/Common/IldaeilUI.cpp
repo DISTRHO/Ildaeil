@@ -219,6 +219,8 @@ public:
             fPluginHasEmbedUI = false;
             if (fPluginGenericUI == nullptr)
                 createPluginGenericUI(handle, info);
+            else
+                updatePluginGenericUI(handle);
             const double scaleFactor = getScaleFactor();
             setSize(kGenericWidth * scaleFactor, (kGenericHeight + kExtraHeight) * scaleFactor);
         }
@@ -305,6 +307,20 @@ public:
         }
 
         fPluginGenericUI = ui;
+    }
+
+    void updatePluginGenericUI(const CarlaHostHandle handle)
+    {
+        PluginGenericUI* const ui = fPluginGenericUI;
+        DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+        for (uint32_t i=0; i < ui->parameterCount; ++i)
+        {
+            ui->values[i] = carla_get_current_parameter_value(handle, 0, ui->parameters[i].rindex);
+
+            if (ui->parameters[i].boolean)
+                ui->parameters[i].bvalue = ui->values[i] > ui->parameters[i].min;
+        }
     }
 
 protected:
@@ -457,6 +473,8 @@ protected:
 
                     if (fPluginGenericUI == nullptr)
                         createPluginGenericUI(handle, carla_get_plugin_info(handle, 0));
+                    else
+                        updatePluginGenericUI(handle);
 
                     const double scaleFactor = getScaleFactor();
                     setSize(std::max(getWidth(), static_cast<uint>(kGenericWidth * scaleFactor + 0.5)),
