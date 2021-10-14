@@ -41,6 +41,7 @@ static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpc
 // --------------------------------------------------------------------------------------------------------------------
 
 void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -472,9 +473,9 @@ static void host_ui_parameter_changed(const NativeHostHandle handle, const uint3
     ildaeilParameterChangeForUI(static_cast<IldaeilPlugin*>(handle)->fUI, index, value);
 }
 
-static const char* host_ui_open_file(NativeHostHandle, bool, const char*, const char*)
+static const char* host_ui_open_file(const NativeHostHandle handle, const bool isDir, const char* const title, const char* const filter)
 {
-    return nullptr;
+    return ildaeilOpenFileForUI(static_cast<IldaeilPlugin*>(handle)->fUI, isDir, title, filter);
 }
 
 static const char* host_ui_save_file(NativeHostHandle, bool, const char*, const char*)

@@ -47,6 +47,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
 
 // --------------------------------------------------------------------------------------------------------------------
 using namespace CarlaBackend;
@@ -131,6 +132,7 @@ class IldaeilUI : public UI,
     IldaeilPlugin* const fPlugin;
     PluginHostWindow fPluginHostWindow;
 
+    PluginType fPluginType;
     uint fPluginCount;
     uint fPluginSelected;
     bool fPluginScanningFinished;
@@ -149,6 +151,7 @@ public:
           fDrawingState(kDrawingInit),
           fPlugin((IldaeilPlugin*)getPluginInstancePointer()),
           fPluginHostWindow(getWindow(), this),
+          fPluginType(PLUGIN_LV2),
           fPluginCount(0),
           fPluginSelected(0),
           fPluginScanningFinished(false),
@@ -232,6 +235,14 @@ public:
                 break;
             }
         }
+    }
+
+    const char* openFileFromDSP(const bool /*isDir*/, const char* const title, const char* const /*filter*/)
+    {
+        Window::FileBrowserOptions opts;
+        opts.title = title;
+        getWindow().openFileBrowser(opts);
+        return nullptr;
     }
 
     void showPluginUI(const CarlaHostHandle handle)
@@ -364,7 +375,7 @@ public:
             carla_replace_plugin(handle, 0);
         }
 
-        if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_LV2, nullptr, nullptr,
+        if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
                              label, 0, 0x0, PLUGIN_OPTIONS_NULL))
         {
             fPluginGenericUI = nullptr;
@@ -410,9 +421,15 @@ protected:
         }
     }
 
+    void uiFileBrowserSelected(const char* const filename) override
+    {
+        if (fPlugin != nullptr && fPlugin->fCarlaHostHandle != nullptr && filename != nullptr)
+            carla_set_custom_data(fPlugin->fCarlaHostHandle, 0, CUSTOM_DATA_TYPE_STRING, "file", filename);
+    }
+
     void run() override
     {
-        if (const uint count = carla_get_cached_plugin_count(PLUGIN_LV2, nullptr))
+        if (const uint count = carla_get_cached_plugin_count(fPluginType, nullptr))
         {
             fPluginCount = 0;
             fPlugins = new PluginInfoCache[count];
@@ -422,7 +439,7 @@ protected:
 
             for (uint i=0, j; i < count && ! shouldThreadExit(); ++i)
             {
-                const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(PLUGIN_LV2, i);
+                const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(fPluginType, i);
                 DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
 
                 if (! info->valid)
@@ -646,12 +663,28 @@ protected:
                 do {
                     const PluginInfoCache& info(fPlugins[fPluginSelected]);
 
-                    const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
-                    DISTRHO_SAFE_ASSERT_BREAK(slash != nullptr);
+                    const char* label = nullptr;
+
+                    switch (fPluginType)
+                    {
+                    case PLUGIN_INTERNAL:
+                        label = info.label;
+                        break;
+                    case PLUGIN_LV2: {
+                        const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
+                        DISTRHO_SAFE_ASSERT_BREAK(slash != nullptr);
+                        label = slash+1;
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+
+                    DISTRHO_SAFE_ASSERT_BREAK(label != nullptr);
 
                     d_stdout("Loading %s...", info.name);
 
-                    if (loadPlugin(handle, slash+1))
+                    if (loadPlugin(handle, label))
                     {
                         ImGui::EndDisabled();
                         ImGui::End();
@@ -674,33 +707,62 @@ protected:
 
             if (ImGui::BeginChild("pluginlistwindow"))
             {
-                if (ImGui::BeginTable("pluginlist", 3, ImGuiTableFlags_NoSavedSettings|ImGuiTableFlags_NoClip))
+                if (ImGui::BeginTable("pluginlist",
+                                      fPluginType == PLUGIN_LV2 ? 3 : 2,
+                                      ImGuiTableFlags_NoSavedSettings|ImGuiTableFlags_NoClip))
                 {
-                    ImGui::TableSetupColumn("Name");
-                    ImGui::TableSetupColumn("Bundle");
-                    ImGui::TableSetupColumn("URI");
-                    ImGui::TableHeadersRow();
-
                     const char* const search = fPluginSearchActive && fPluginSearchString[0] != '\0' ? fPluginSearchString : nullptr;
+
+                    switch (fPluginType)
+                    {
+                    case PLUGIN_INTERNAL:
+                        ImGui::TableSetupColumn("Name");
+                        ImGui::TableSetupColumn("Label");
+                        ImGui::TableHeadersRow();
+                        break;
+                    case PLUGIN_LV2:
+                        ImGui::TableSetupColumn("Name");
+                        ImGui::TableSetupColumn("Bundle");
+                        ImGui::TableSetupColumn("URI");
+                        ImGui::TableHeadersRow();
+                        break;
+                    default:
+                        break;
+                    }
 
                     for (uint i=0; i<fPluginCount; ++i)
                     {
                         const PluginInfoCache& info(fPlugins[i]);
 
-                        const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
-                        DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
-
                         if (search != nullptr && strcasestr(info.name, search) == nullptr)
                             continue;
 
                         bool selected = fPluginSelected == i;
-                        ImGui::TableNextRow();
-                        ImGui::TableSetColumnIndex(0);
-                        ImGui::Selectable(info.name, &selected);
-                        ImGui::TableSetColumnIndex(1);
-                        ImGui::Selectable(slash+1, &selected);
-                        ImGui::TableSetColumnIndex(2);
-                        ImGui::TextUnformatted(info.label, slash);
+
+                        switch (fPluginType)
+                        {
+                        case PLUGIN_INTERNAL:
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Selectable(info.name, &selected);
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::Selectable(info.label, &selected);
+                            break;
+                        case PLUGIN_LV2: {
+                            const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
+                            DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Selectable(info.name, &selected);
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::Selectable(slash+1, &selected);
+                            ImGui::TableSetColumnIndex(2);
+                            ImGui::TextUnformatted(info.label, slash);
+                            break;
+                        }
+                        default:
+                            break;
+                        }
 
                         if (selected)
                             fPluginSelected = i;
@@ -739,11 +801,19 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
 void ildaeilParameterChangeForUI(void* const ui, const uint32_t index, const float value)
 {
     DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
 
     static_cast<IldaeilUI*>(ui)->changeParameterFromDSP(index, value);
+}
+
+const char* ildaeilOpenFileForUI(void* const ui, const bool isDir, const char* const title, const char* const filter)
+{
+    DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr, nullptr);
+
+    return static_cast<IldaeilUI*>(ui)->openFileFromDSP(isDir, title, filter);
 }
 
 /* --------------------------------------------------------------------------------------------------------------------
