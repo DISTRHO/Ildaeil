@@ -29,6 +29,7 @@
 
 START_NAMESPACE_DISTRHO
 
+// --------------------------------------------------------------------------------------------------------------------
 class IldaeilPlugin : public Plugin
 {
 public:
@@ -38,11 +39,16 @@ public:
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
 
+    void* fUI;
+
     // ...
 };
 
-// -----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
+void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+
+// --------------------------------------------------------------------------------------------------------------------
 using namespace CarlaBackend;
 
 // shared resource pointer
@@ -159,8 +165,6 @@ public:
 
         std::strcpy(fPluginSearchString, "Search...");
 
-        // fPlugin->setUI(this);
-
         const double scaleFactor = getScaleFactor();
 
         if (d_isNotEqual(scaleFactor, 1.0))
@@ -189,22 +193,45 @@ public:
             fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
             fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
         }
+
+        fPlugin->fUI = this;
     }
 
     ~IldaeilUI() override
     {
         if (fPlugin != nullptr && fPlugin->fCarlaHostHandle != nullptr)
+        {
+            fPlugin->fUI = nullptr;
             carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, "0");
+        }
 
         if (isThreadRunning())
             stopThread(-1);
 
-        // fPlugin->fUI = nullptr;
         hidePluginUI();
 
         fPluginGenericUI = nullptr;
 
         delete[] fPlugins;
+    }
+
+    void changeParameterFromDSP(const uint32_t index, const float value)
+    {
+        if (PluginGenericUI* const ui = fPluginGenericUI)
+        {
+            for (uint32_t i=0; i < ui->parameterCount; ++i)
+            {
+                if (ui->parameters[i].rindex != index)
+                    continue;
+
+                ui->values[i] = value;
+
+                if (ui->parameters[i].boolean)
+                    ui->parameters[i].bvalue = value > ui->parameters[i].min;
+
+                break;
+            }
+        }
     }
 
     void showPluginUI(const CarlaHostHandle handle)
@@ -711,7 +738,15 @@ private:
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(IldaeilUI)
 };
 
-/* ------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+void ildaeilParameterChangeForUI(void* const ui, const uint32_t index, const float value)
+{
+    DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+    static_cast<IldaeilUI*>(ui)->changeParameterFromDSP(index, value);
+}
+
+/* --------------------------------------------------------------------------------------------------------------------
  * UI entry point, called by DPF to create a new UI instance. */
 
 UI* createUI()
@@ -719,6 +754,6 @@ UI* createUI()
     return new IldaeilUI();
 }
 
-// -----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 END_NAMESPACE_DISTRHO

@@ -24,7 +24,7 @@
 
 START_NAMESPACE_DISTRHO
 
-// -----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 using namespace CarlaBackend;
 
@@ -33,9 +33,16 @@ static double host_get_sample_rate(NativeHostHandle);
 static bool host_is_offline(NativeHostHandle);
 static const NativeTimeInfo* host_get_time_info(NativeHostHandle handle);
 static bool host_write_midi_event(NativeHostHandle handle, const NativeMidiEvent* event);
+static void host_ui_parameter_changed(NativeHostHandle handle, uint32_t index, float value);
+static const char* host_ui_open_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
+static const char* host_ui_save_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
 static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpcode opcode, int32_t index, intptr_t value, void* ptr, float opt);
 
-// -----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+
+void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 class IldaeilPlugin : public Plugin
 {
@@ -45,6 +52,8 @@ public:
 
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
+
+    void* fUI;
 
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
     static constexpr const uint kMaxMidiEventCount = 512;
@@ -58,20 +67,18 @@ public:
     mutable water::MemoryOutputStream fLastProjectState;
     uint32_t fLastLatencyValue;
 
-    void* fUI;
-
     IldaeilPlugin()
         : Plugin(0, 0, 1),
           fCarlaPluginDescriptor(nullptr),
           fCarlaPluginHandle(nullptr),
           fCarlaHostHandle(nullptr),
+          fUI(nullptr),
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
           fMidiEvents(nullptr),
           fMidiEventCount(0),
           fDummyBuffer(nullptr),
 #endif
-          fLastLatencyValue(0),
-          fUI(nullptr)
+          fLastLatencyValue(0)
     {
         fCarlaPluginDescriptor = carla_get_native_rack_plugin();
         DISTRHO_SAFE_ASSERT_RETURN(fCarlaPluginDescriptor != nullptr,);
@@ -90,12 +97,12 @@ public:
 
         fCarlaHostDescriptor.get_time_info = host_get_time_info;
         fCarlaHostDescriptor.write_midi_event = host_write_midi_event;
-        fCarlaHostDescriptor.ui_parameter_changed = nullptr;
+        fCarlaHostDescriptor.ui_parameter_changed = host_ui_parameter_changed;
         fCarlaHostDescriptor.ui_midi_program_changed = nullptr;
         fCarlaHostDescriptor.ui_custom_data_changed = nullptr;
         fCarlaHostDescriptor.ui_closed = nullptr;
-        fCarlaHostDescriptor.ui_open_file = nullptr;
-        fCarlaHostDescriptor.ui_save_file = nullptr;
+        fCarlaHostDescriptor.ui_open_file = host_ui_open_file;
+        fCarlaHostDescriptor.ui_save_file = host_ui_save_file;
         fCarlaHostDescriptor.dispatcher = host_dispatcher;
 
         fCarlaPluginHandle = fCarlaPluginDescriptor->instantiate(&fCarlaHostDescriptor);
@@ -106,6 +113,9 @@ public:
 
         carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/usr/lib/carla");
         carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
+
+        fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_HOST_USES_EMBED,
+                                           0, 0, nullptr, 0.0f);
 
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
         fMidiEvents = new NativeMidiEvent[kMaxMidiEventCount];
@@ -166,12 +176,32 @@ public:
     }
 #endif
 
-    void hostResizeUI(const uint width, const uint height)
+    intptr_t hostDispatcher(const NativeHostDispatcherOpcode opcode,
+                            const int32_t index, const intptr_t value, void* const ptr, const float opt)
     {
-        DISTRHO_SAFE_ASSERT_RETURN(fUI != nullptr,);
+        switch (opcode)
+        {
+        case NATIVE_HOST_OPCODE_NULL:
+        case NATIVE_HOST_OPCODE_UPDATE_PARAMETER:
+        case NATIVE_HOST_OPCODE_UPDATE_MIDI_PROGRAM:
+        case NATIVE_HOST_OPCODE_RELOAD_PARAMETERS:
+        case NATIVE_HOST_OPCODE_RELOAD_MIDI_PROGRAMS:
+        case NATIVE_HOST_OPCODE_RELOAD_ALL:
+        case NATIVE_HOST_OPCODE_UI_UNAVAILABLE:
+        case NATIVE_HOST_OPCODE_HOST_IDLE:
+        case NATIVE_HOST_OPCODE_INTERNAL_PLUGIN:
+        case NATIVE_HOST_OPCODE_QUEUE_INLINE_DISPLAY:
+        case NATIVE_HOST_OPCODE_UI_TOUCH_PARAMETER:
+        case NATIVE_HOST_OPCODE_REQUEST_IDLE:
+        case NATIVE_HOST_OPCODE_GET_FILE_PATH:
+        case NATIVE_HOST_OPCODE_UI_RESIZE:
+        case NATIVE_HOST_OPCODE_PREVIEW_BUFFER_DATA:
+            // TESTING
+            d_stdout("dispatcher %i, %i, %li, %p, %f", opcode, index, value, ptr, opt);
+            break;
+        }
 
-        d_stdout("asking to resizing ui to %u %u - I SAY NO", width, height);
-        // fUI->setSize(width, height);
+        return 0;
     }
 
 protected:
@@ -377,16 +407,27 @@ protected:
         }
     }
 
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
     void bufferSizeChanged(const uint32_t newBufferSize) override
     {
+#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
         delete[] fDummyBuffer;
         fDummyBuffer = new float[newBufferSize];
         fDummyBuffers[0] = fDummyBuffer;
         fDummyBuffers[1] = fDummyBuffer;
         std::memset(fDummyBuffer, 0, sizeof(float)*newBufferSize);
-    }
 #endif
+        if (fCarlaPluginHandle != nullptr)
+            fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_BUFFER_SIZE_CHANGED,
+                                               0, newBufferSize, nullptr, 0.0f);
+    }
+
+    void sampleRateChanged(const double newSampleRate) override
+    {
+        if (fCarlaPluginHandle != nullptr)
+            fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_SAMPLE_RATE_CHANGED,
+                                               0, 0, nullptr, newSampleRate);
+    }
+
     // -------------------------------------------------------------------------------------------------------
 
    /**
@@ -426,26 +467,28 @@ static bool host_write_midi_event(const NativeHostHandle handle, const NativeMid
 #endif
 }
 
+static void host_ui_parameter_changed(const NativeHostHandle handle, const uint32_t index, const float value)
+{
+    ildaeilParameterChangeForUI(static_cast<IldaeilPlugin*>(handle)->fUI, index, value);
+}
+
+static const char* host_ui_open_file(NativeHostHandle, bool, const char*, const char*)
+{
+    return nullptr;
+}
+
+static const char* host_ui_save_file(NativeHostHandle, bool, const char*, const char*)
+{
+    return nullptr;
+}
+
 static intptr_t host_dispatcher(const NativeHostHandle handle, const NativeHostDispatcherOpcode opcode,
                                 const int32_t index, const intptr_t value, void* const ptr, const float opt)
 {
-    switch (opcode)
-    {
-    case NATIVE_HOST_OPCODE_UI_RESIZE:
-        static_cast<IldaeilPlugin*>(handle)->hostResizeUI(index, value);
-        break;
-    default:
-        break;
-    }
-
-    return 0;
-
-    // unused
-    (void)ptr;
-    (void)opt;
+    return static_cast<IldaeilPlugin*>(handle)->hostDispatcher(opcode, index, value, ptr, opt);
 }
 
-/* ------------------------------------------------------------------------------------------------------------
+/* --------------------------------------------------------------------------------------------------------------------
  * Plugin entry point, called by DPF to create a new plugin instance. */
 
 Plugin* createPlugin()
@@ -453,6 +496,6 @@ Plugin* createPlugin()
     return new IldaeilPlugin();
 }
 
-// -----------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 
 END_NAMESPACE_DISTRHO
