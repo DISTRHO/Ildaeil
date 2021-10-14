@@ -176,7 +176,10 @@ public:
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
 
-        // carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
+
+        char winIdStr[24];
+        std::snprintf(winIdStr, sizeof(winIdStr), "%lx", (ulong)getWindow().getNativeWindowHandle());
+        carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, winIdStr);
         carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
 
         if (carla_get_current_plugin_count(handle) != 0)
@@ -190,6 +193,9 @@ public:
 
     ~IldaeilUI() override
     {
+        if (fPlugin != nullptr && fPlugin->fCarlaHostHandle != nullptr)
+            carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, "0");
+
         if (isThreadRunning())
             stopThread(-1);
 
