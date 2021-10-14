@@ -323,6 +323,25 @@ public:
         }
     }
 
+    bool loadPlugin(const CarlaHostHandle handle, const char* const label)
+    {
+        if (carla_get_current_plugin_count(handle) != 0)
+        {
+            hidePluginUI();
+            carla_replace_plugin(handle, 0);
+        }
+
+        if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_LV2, nullptr, nullptr,
+                             label, 0, 0x0, PLUGIN_OPTIONS_NULL))
+        {
+            fPluginGenericUI = nullptr;
+            showPluginUI(handle);
+            return true;
+        }
+
+        return false;
+    }
+
 protected:
     void pluginWindowResized(uint width, uint height) override
     {
@@ -442,6 +461,13 @@ protected:
 
                 const double scaleFactor = getScaleFactor();
                 setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Reset"))
+            {
+                loadPlugin(handle, carla_get_plugin_info(handle, 0)->label);
             }
 
             if (fDrawingState == kDrawingPluginGenericUI && fPluginHasCustomUI)
@@ -574,7 +600,6 @@ protected:
         setupMainWindowPos();
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
-        const bool pluginIsRunning = carla_get_current_plugin_count(handle) != 0;
 
         if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
@@ -585,12 +610,6 @@ protected:
 
             if (ImGui::Button("Load Plugin"))
             {
-                if (pluginIsRunning)
-                {
-                    hidePluginUI();
-                    carla_replace_plugin(handle, 0);
-                }
-
                 do {
                     const PluginInfoCache& info(fPlugins[fPluginSelected]);
 
@@ -599,22 +618,16 @@ protected:
 
                     d_stdout("Loading %s...", info.name);
 
-                    if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_LV2, nullptr, nullptr,
-                                         slash+1, 0, 0x0, PLUGIN_OPTIONS_NULL))
+                    if (loadPlugin(handle, slash+1))
                     {
-                        fPluginGenericUI = nullptr;
-                        showPluginUI(handle);
                         ImGui::EndDisabled();
                         ImGui::End();
                         return;
                     }
-
                 } while (false);
             }
 
-            ImGui::EndDisabled();
-
-            if (pluginIsRunning)
+            if (carla_get_current_plugin_count(handle) != 0)
             {
                 ImGui::SameLine();
 
@@ -623,6 +636,8 @@ protected:
                     showPluginUI(handle);
                 }
             }
+
+            ImGui::EndDisabled();
 
             if (ImGui::BeginChild("pluginlistwindow"))
             {
