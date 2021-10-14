@@ -39,7 +39,7 @@ endif
 # --------------------------------------------------------------
 
 clean:
-	$(MAKE) clean -C carla
+	$(MAKE) distclean -C carla
 	$(MAKE) clean -C dpf/dgl
 	$(MAKE) clean -C dpf/utils/lv2-ttl-generator
 	$(MAKE) clean -C plugins/FX

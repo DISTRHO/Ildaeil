@@ -67,7 +67,8 @@ class IldaeilUI : public UI,
 
     enum {
         kDrawingInit,
-        kDrawingError,
+        kDrawingErrorInit,
+        kDrawingErrorDraw,
         kDrawingLoading,
         kDrawingPluginList,
         kDrawingPluginEmbedUI,
@@ -147,6 +148,8 @@ class IldaeilUI : public UI,
     bool fPluginSearchFirstShow;
     char fPluginSearchString[0xff];
 
+    String fPopupError;
+
 public:
     IldaeilUI()
         : UI(kInitialWidth, kInitialHeight),
@@ -165,9 +168,13 @@ public:
           fPluginSearchActive(false),
           fPluginSearchFirstShow(false)
     {
+        const double scaleFactor = getScaleFactor();
+
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
         {
-            fDrawingState = kDrawingError;
+            fDrawingState = kDrawingErrorInit;
+            fPopupError = "Ildaeil backend failed to init properly, cannot continue.";
+            setSize(kInitialWidth * scaleFactor * 0.5, kInitialHeight * scaleFactor * 0.5);
             return;
         }
 
@@ -177,7 +184,6 @@ public:
         style.FrameRounding = 4;
 
         const double padding = style.WindowPadding.y * 2;
-        const double scaleFactor = getScaleFactor();
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
@@ -396,6 +402,12 @@ public:
             showPluginUI(handle);
             return true;
         }
+        else
+        {
+            fPopupError = carla_get_last_error(handle);
+            d_stdout("got error: %s", fPopupError.buffer());
+            ImGui::OpenPopup("Plugin Error");
+        }
 
         return false;
     }
@@ -500,8 +512,12 @@ protected:
         case kDrawingPluginList:
             drawPluginList();
             break;
-        case kDrawingError:
-            // TODO display error message
+        case kDrawingErrorInit:
+            fDrawingState = kDrawingErrorDraw;
+            drawError(true);
+            break;
+        case kDrawingErrorDraw:
+            drawError(false);
             break;
         case kDrawingPluginGenericUI:
             drawGenericUI();
@@ -510,6 +526,44 @@ protected:
             drawTopBar();
             break;
         }
+
+    }
+
+    void drawError(const bool open)
+    {
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), getHeight()));
+
+        const int flags = ImGuiWindowFlags_NoSavedSettings
+                        | ImGuiWindowFlags_NoTitleBar
+                        | ImGuiWindowFlags_NoResize
+                        | ImGuiWindowFlags_NoCollapse
+                        | ImGuiWindowFlags_NoScrollbar
+                        | ImGuiWindowFlags_NoScrollWithMouse
+                        | ImGuiWindowFlags_NoCollapse;
+
+        if (ImGui::Begin("Error Window", nullptr, flags))
+        {
+            if (open)
+                ImGui::OpenPopup("Engine Error");
+
+            const int pflags = ImGuiWindowFlags_NoSavedSettings
+                             | ImGuiWindowFlags_NoResize
+                             | ImGuiWindowFlags_NoCollapse
+                             | ImGuiWindowFlags_NoScrollbar
+                             | ImGuiWindowFlags_NoScrollWithMouse
+                             | ImGuiWindowFlags_NoCollapse
+                             | ImGuiWindowFlags_AlwaysAutoResize
+                             | ImGuiWindowFlags_AlwaysUseWindowPadding;
+
+            if (ImGui::BeginPopupModal("Engine Error", nullptr, pflags))
+            {
+                ImGui::TextUnformatted(fPopupError.buffer(), nullptr);
+                ImGui::EndPopup();
+            }
+        }
+
+        ImGui::End();
     }
 
     void drawTopBar()
@@ -689,7 +743,31 @@ protected:
 
         if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
-            if (fPluginSearchFirstShow)
+            const int pflags = ImGuiWindowFlags_NoSavedSettings
+                             | ImGuiWindowFlags_NoResize
+                             | ImGuiWindowFlags_NoCollapse
+                             | ImGuiWindowFlags_NoScrollbar
+                             | ImGuiWindowFlags_NoScrollWithMouse
+                             | ImGuiWindowFlags_NoCollapse
+                             | ImGuiWindowFlags_AlwaysAutoResize
+                             | ImGuiWindowFlags_AlwaysUseWindowPadding;
+
+            if (ImGui::BeginPopupModal("Plugin Error", nullptr, pflags))
+            {
+                ImGui::TextWrapped("Failed to load plugin, error was:\n%s", fPopupError.buffer());
+
+                ImGui::Separator();
+
+                if (ImGui::Button("Ok"))
+                {
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::SameLine();
+                ImGui::Dummy(ImVec2(500 * getScaleFactor(), 1));
+                ImGui::EndPopup();
+            }
+            else if (fPluginSearchFirstShow)
             {
                 fPluginSearchFirstShow = false;
                 ImGui::SetKeyboardFocusHere();
