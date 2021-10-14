@@ -65,6 +65,7 @@ BUILD_CXX_FLAGS += -I../../dpf-widgets/generic
 BUILD_CXX_FLAGS += -I../../dpf-widgets/opengl
 
 BUILD_CXX_FLAGS += -DREAL_BUILD
+BUILD_CXX_FLAGS += -DSTATIC_PLUGIN_TARGET
 BUILD_CXX_FLAGS += -I../../carla/source/backend
 BUILD_CXX_FLAGS += -I../../carla/source/includes
 BUILD_CXX_FLAGS += -I../../carla/source/modules

@@ -22,6 +22,11 @@
 #include "PluginHostWindow.hpp"
 #include "extra/Thread.hpp"
 
+// IDE helper
+#include "DearImGui.hpp"
+
+#include <vector>
+
 START_NAMESPACE_DISTRHO
 
 class IldaeilPlugin : public Plugin
@@ -49,7 +54,7 @@ class IldaeilUI : public UI,
 {
     static constexpr const uint kInitialWidth  = 1220;
     static constexpr const uint kInitialHeight = 640;
-    static constexpr const uint kGenericWidth  = 600;
+    static constexpr const uint kGenericWidth  = 300;
     static constexpr const uint kGenericHeight = 400;
     static constexpr const uint kExtraHeight   = 35;
 
@@ -58,7 +63,7 @@ class IldaeilUI : public UI,
         kDrawingError,
         kDrawingLoading,
         kDrawingPluginList,
-        kDrawingPluginCustomUI,
+        kDrawingPluginEmbedUI,
         kDrawingPluginGenericUI,
         kDrawingPluginPendingFromInit
     } fDrawingState;
@@ -78,13 +83,55 @@ class IldaeilUI : public UI,
         }
     };
 
+    struct PluginGenericUI {
+        char* title;
+        uint parameterCount;
+        struct Parameter {
+            char* name;
+            char* format;
+            uint32_t rindex;
+            bool boolean, bvalue;
+            float min, max;
+            Parameter()
+                : name(nullptr),
+                  format(nullptr),
+                  rindex(0),
+                  boolean(false),
+                  bvalue(false),
+                  min(0.0f),
+                  max(1.0f) {}
+            ~Parameter()
+            {
+                std::free(name);
+                std::free(format);
+            }
+        }* parameters;
+        float* values;
+
+        PluginGenericUI()
+            : title(nullptr),
+              parameterCount(0),
+              parameters(nullptr),
+              values(nullptr) {}
+
+        ~PluginGenericUI()
+        {
+            std::free(title);
+            delete[] parameters;
+            delete[] values;
+        }
+    };
+
     IldaeilPlugin* const fPlugin;
     PluginHostWindow fPluginHostWindow;
 
     uint fPluginCount;
     uint fPluginSelected;
     bool fPluginScanningFinished;
+    bool fPluginHasCustomUI;
+    bool fPluginHasEmbedUI;
     PluginInfoCache* fPlugins;
+    ScopedPointer<PluginGenericUI> fPluginGenericUI;
 
     bool fPluginSearchActive;
     char fPluginSearchString[0xff];
@@ -99,6 +146,8 @@ public:
           fPluginCount(0),
           fPluginSelected(0),
           fPluginScanningFinished(false),
+          fPluginHasCustomUI(false),
+          fPluginHasEmbedUI(false),
           fPlugins(nullptr),
           fPluginSearchActive(false)
     {
@@ -131,7 +180,12 @@ public:
         carla_set_engine_option(handle, ENGINE_OPTION_FRONTEND_UI_SCALE, getScaleFactor()*1000, nullptr);
 
         if (carla_get_current_plugin_count(handle) != 0)
+        {
+            const uint hints = carla_get_plugin_info(handle, 0)->hints;
             fDrawingState = kDrawingPluginPendingFromInit;
+            fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
+            fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
+        }
     }
 
     ~IldaeilUI() override
@@ -142,6 +196,8 @@ public:
         // fPlugin->fUI = nullptr;
         hidePluginUI();
 
+        fPluginGenericUI = nullptr;
+
         delete[] fPlugins;
     }
 
@@ -151,13 +207,18 @@ public:
 
         if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
-            fDrawingState = kDrawingPluginCustomUI;
+            fDrawingState = kDrawingPluginEmbedUI;
+            fPluginHasCustomUI = true;
+            fPluginHasEmbedUI = true;
             carla_embed_custom_ui(handle, 0, fPluginHostWindow.attachAndGetWindowHandle());
         }
         else
         {
             fDrawingState = kDrawingPluginGenericUI;
-            // TODO query parameter information and store it
+            fPluginHasCustomUI = info->hints & PLUGIN_HAS_CUSTOM_UI;
+            fPluginHasEmbedUI = false;
+            if (fPluginGenericUI == nullptr)
+                createPluginGenericUI(handle, info);
             const double scaleFactor = getScaleFactor();
             setSize(kGenericWidth * scaleFactor, (kGenericHeight + kExtraHeight) * scaleFactor);
         }
@@ -167,14 +228,83 @@ public:
 
     void hidePluginUI()
     {
-
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
             return;
 
-        if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginCustomUI)
+        if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginEmbedUI)
             carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
         fPluginHostWindow.hide();
+    }
+
+    void createPluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* const info)
+    {
+        PluginGenericUI* const ui = new PluginGenericUI;
+
+        String title(info->name);
+        title += " by ";
+        title += info->maker;
+        ui->title = title.getAndReleaseBuffer();
+
+        const uint32_t pcount = ui->parameterCount = carla_get_parameter_count(handle, 0);
+
+        // make count of valid parameters
+        for (uint32_t i=0; i < pcount; ++i)
+        {
+            const ParameterData* const pdata = carla_get_parameter_data(handle, 0, i);
+
+            if (pdata->type != PARAMETER_INPUT ||
+                (pdata->hints & PARAMETER_IS_ENABLED) == 0x0 ||
+                (pdata->hints & PARAMETER_IS_READ_ONLY) != 0x0)
+            {
+                --ui->parameterCount;
+                continue;
+            }
+        }
+
+        ui->parameters = new PluginGenericUI::Parameter[ui->parameterCount];
+        ui->values = new float[ui->parameterCount];
+
+        // now safely fill in details
+        for (uint32_t i=0, j=0; i < pcount; ++i)
+        {
+            const ParameterData* const pdata = carla_get_parameter_data(handle, 0, i);
+
+            if (pdata->type != PARAMETER_INPUT ||
+                (pdata->hints & PARAMETER_IS_ENABLED) == 0x0 ||
+                (pdata->hints & PARAMETER_IS_READ_ONLY) != 0x0)
+                continue;
+
+            const CarlaParameterInfo* const pinfo = carla_get_parameter_info(handle, 0, i);
+            const ::ParameterRanges* const pranges = carla_get_parameter_ranges(handle, 0, i);
+
+            String format;
+
+            if (pdata->hints & PARAMETER_IS_INTEGER)
+                format = "%.0f ";
+            else
+                format = "%.3f ";
+
+            format += pinfo->unit;
+
+            PluginGenericUI::Parameter& param(ui->parameters[j]);
+            param.name = strdup(pinfo->name);
+            param.format = format.getAndReleaseBuffer();
+            param.rindex = i;
+            param.boolean = pdata->hints & PARAMETER_IS_BOOLEAN;
+            param.min = pranges->min;
+            param.max = pranges->max;
+            ui->values[j] = carla_get_current_parameter_value(handle, 0, i);
+
+            if (param.boolean)
+                param.bvalue = ui->values[j] > param.min;
+            else
+                param.bvalue = false;
+
+            ++j;
+        }
+
+        fPluginGenericUI = ui;
     }
 
 protected:
@@ -198,7 +328,7 @@ protected:
             startThread();
             break;
 
-        case kDrawingPluginCustomUI:
+        case kDrawingPluginEmbedUI:
             fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
             fPluginHostWindow.idle();
             break;
@@ -226,6 +356,9 @@ protected:
             {
                 const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(PLUGIN_LV2, i);
                 DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
+
+                if (! info->valid)
+                    continue;
 
                 #if DISTRHO_PLUGIN_IS_SYNTH
                 if (info->midiIns != 1 || info->audioOuts != 2)
@@ -271,7 +404,7 @@ protected:
         case kDrawingPluginGenericUI:
             drawGenericUI();
             // fall-through
-        case kDrawingPluginCustomUI:
+        case kDrawingPluginEmbedUI:
             drawTopBar();
             break;
         }
@@ -284,24 +417,50 @@ protected:
 
         if (ImGui::Begin("Current Plugin", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
+            const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
             if (ImGui::Button("Pick Another..."))
             {
                 hidePluginUI();
-
                 fDrawingState = kDrawingPluginList;
+
                 const double scaleFactor = getScaleFactor();
                 setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
-                return ImGui::End();
             }
 
-            if (fDrawingState == kDrawingPluginGenericUI)
+            if (fDrawingState == kDrawingPluginGenericUI && fPluginHasCustomUI)
             {
                 ImGui::SameLine();
 
                 if (ImGui::Button("Show Custom GUI"))
                 {
-                    carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, true);
-                    return ImGui::End();
+                    if (fPluginHasEmbedUI)
+                    {
+                        fDrawingState = kDrawingPluginEmbedUI;
+                        carla_embed_custom_ui(handle, 0, fPluginHostWindow.attachAndGetWindowHandle());
+                    }
+                    else
+                    {
+                        carla_show_custom_ui(handle, 0, true);
+                    }
+                }
+            }
+
+            if (fDrawingState == kDrawingPluginEmbedUI)
+            {
+                ImGui::SameLine();
+
+                if (ImGui::Button("Show Generic GUI"))
+                {
+                    hidePluginUI();
+                    fDrawingState = kDrawingPluginGenericUI;
+
+                    if (fPluginGenericUI == nullptr)
+                        createPluginGenericUI(handle, carla_get_plugin_info(handle, 0));
+
+                    const double scaleFactor = getScaleFactor();
+                    setSize(std::max(getWidth(), static_cast<uint>(kGenericWidth * scaleFactor + 0.5)),
+                            (kGenericHeight + kExtraHeight) * scaleFactor);
                 }
             }
         }
@@ -328,9 +487,53 @@ protected:
     {
         setupMainWindowPos();
 
-        if (ImGui::Begin("Plugin Parameters", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
+        PluginGenericUI* const ui = fPluginGenericUI;
+        DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+        if (ImGui::Begin(ui->title, nullptr, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse))
         {
-            ImGui::TextUnformatted("TODO :: here will go plugin parameters", nullptr);
+            const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
+            for (uint32_t i=0; i < ui->parameterCount; ++i)
+            {
+                PluginGenericUI::Parameter& param(ui->parameters[i]);
+
+                if (param.boolean)
+                {
+                    if (ImGui::Checkbox(param.name, &ui->parameters[i].bvalue))
+                    {
+                        if (ImGui::IsItemActivated())
+                        {
+                            carla_set_parameter_touch(handle, 0, param.rindex, true);
+                            // editParameter(0, true);
+                        }
+
+                        ui->values[i] = ui->parameters[i].bvalue ? ui->parameters[i].max : ui->parameters[i].min;
+                        carla_set_parameter_value(handle, 0, param.rindex, ui->values[i]);
+                        // setParameterValue(0, ui->values[i]);
+                    }
+                }
+                else
+                {
+                    if (ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.format))
+                    {
+                        if (ImGui::IsItemActivated())
+                        {
+                            carla_set_parameter_touch(handle, 0, param.rindex, true);
+                            // editParameter(0, true);
+                        }
+
+                        carla_set_parameter_value(handle, 0, param.rindex, ui->values[i]);
+                        // setParameterValue(0, ui->values[i]);
+                    }
+                }
+
+                if (ImGui::IsItemDeactivated())
+                {
+                    carla_set_parameter_touch(handle, 0, param.rindex, false);
+                    // editParameter(0, false);
+                }
+            }
         }
 
         ImGui::End();
@@ -381,15 +584,11 @@ protected:
                     if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_LV2, nullptr, nullptr,
                                          slash+1, 0, 0x0, PLUGIN_OPTIONS_NULL))
                     {
+                        fPluginGenericUI = nullptr;
                         showPluginUI(handle);
-
-                        /*
-                        delete[] fPlugins;
-                        fPlugins = nullptr;
-                        fPluginCount = 0;
-                        */
-
-                        break;
+                        ImGui::EndDisabled();
+                        ImGui::End();
+                        return;
                     }
 
                 } while (false);

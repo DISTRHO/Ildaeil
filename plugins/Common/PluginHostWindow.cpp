@@ -130,6 +130,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_WINDOWS)
         return nullptr;
 #else
+        pluginWindow = 0;
         return (void*)parentWindowId;
 #endif
     }
@@ -230,7 +231,7 @@ struct PluginHostWindow::PrivateData
                     }
                 }
 
-                d_stdout("child window bounds %u %u", width, height);
+                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
 
                 if (width > 1 && height > 1)
                 {
