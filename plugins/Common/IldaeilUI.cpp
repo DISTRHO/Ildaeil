@@ -97,14 +97,15 @@ class IldaeilUI : public UI,
             char* name;
             char* format;
             uint32_t rindex;
-            bool boolean, bvalue;
-            float min, max;
+            bool boolean, bvalue, log;
+            float min, max, power;
             Parameter()
                 : name(nullptr),
                   format(nullptr),
                   rindex(0),
                   boolean(false),
                   bvalue(false),
+                  log(false),
                   min(0.0f),
                   max(1.0f) {}
             ~Parameter()
@@ -170,7 +171,10 @@ public:
 
         std::strcpy(fPluginSearchString, "Search...");
 
-        const double padding = ImGui::GetStyle().WindowPadding.y * 2;
+        ImGuiStyle& style(ImGui::GetStyle());
+        style.FrameRounding = 4;
+
+        const double padding = style.WindowPadding.y * 2;
         const double scaleFactor = getScaleFactor();
 
         if (d_isNotEqual(scaleFactor, 1.0))
@@ -343,6 +347,7 @@ public:
             param.format = format.getAndReleaseBuffer();
             param.rindex = i;
             param.boolean = pdata->hints & PARAMETER_IS_BOOLEAN;
+            param.log = pdata->hints & PARAMETER_IS_LOGARITHMIC;
             param.min = pranges->min;
             param.max = pranges->max;
             ui->values[j] = carla_get_current_parameter_value(handle, 0, i);
@@ -605,6 +610,8 @@ protected:
         PluginGenericUI* const ui = fPluginGenericUI;
         DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
 
+        ImGui::SetNextWindowFocus();
+
         if (ImGui::Begin(ui->title, nullptr, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse))
         {
             const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
@@ -630,7 +637,10 @@ protected:
                 }
                 else
                 {
-                    if (ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.format))
+                    const bool ret = param.log
+                                   ? ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.format, 2.0f)
+                                   : ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.format);
+                    if (ret)
                     {
                         if (ImGui::IsItemActivated())
                         {
