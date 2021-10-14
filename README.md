@@ -1,9 +1,10 @@
 # DISTRHO Ildaeil
 
 DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.  
-Load a VST2 plugin inside a LV2 host, or an LV2 plugin on a VST3 host, etc.
+The idea is to load it as a plugin inside your DAW and then other the "real" plugin inside Ildaeil.  
+This allows, for example, a VST3 host to load LV2 plugins.
 
-The name comes from the korean 일대일, which means "one to one".
+The Ildaeil name comes from the korean 일대일, which means "one to one".
 
 THIS IS CURRENTLY A WORK IN PROGRESS.
 
@@ -13,17 +14,17 @@ Ildaeil basically works as a mini-wrapper around [Carla](https://github.com/falk
 Everything should be working except plugin parameters (none are exposed to the host).  
 Also, **only LV2 hosting is enabled at the moment**.
 
-When open, Ildaeil will show a list of LV2 plugins to pick from.  
-Simply select one from the table and press "Load plugin".
+When open, Ildaeil will show a list of plugins to pick from or the plugin editor if one is already selected.
 
 If the plugin provides an embedable UI, Ildaeil show will that by default, otherwise it shows a generic parameter list.  
 Toggling between generic vs custom/embed view is possible.  
-In the case of a plugin providing a custom UI that is not embedable, Ildaeil will show the generic view by default.
+In the case of a plugin providing a custom UI that is not embedable, Ildaeil will show the generic view by default.  
 You can press "Show Custom GUI" to open the plugin UI in an external window.
 
-![screenshot](Screenshot.png "Ildaeil")
+![screenshot](Screenshot1.png "Ildaeil")
+![screenshot](Screenshot2.png "Ildaeil")
 
-## Goals
+## Features
 
 The current formats Ildaeil can work as are:
 
@@ -34,6 +35,8 @@ The current formats Ildaeil can work as are:
 
 And it can load the following plugin formats:
 - LV2
+
+## Goals
 
 Later on, in theory, should be able to load the following plugin formats:
 
