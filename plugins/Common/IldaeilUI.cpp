@@ -294,10 +294,10 @@ public:
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
             return;
 
+        fPluginHostWindow.hide();
         if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginEmbedUI)
             carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
 
-        fPluginHostWindow.hide();
     }
 
     void createPluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* const info)

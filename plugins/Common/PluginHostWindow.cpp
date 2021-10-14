@@ -141,6 +141,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
         if (view != nullptr)
             [view setHidden:YES];
+        [NSOpenGLContext clearCurrentContext];
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
         pluginWindow = 0;
