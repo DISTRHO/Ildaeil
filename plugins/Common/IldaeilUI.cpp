@@ -144,6 +144,7 @@ class IldaeilUI : public UI,
     ScopedPointer<PluginGenericUI> fPluginGenericUI;
 
     bool fPluginSearchActive;
+    bool fPluginSearchFirstShow;
     char fPluginSearchString[0xff];
 
 public:
@@ -161,7 +162,8 @@ public:
           fPluginHasEmbedUI(false),
           fPluginWillRunInBridgeMode(false),
           fPlugins(nullptr),
-          fPluginSearchActive(false)
+          fPluginSearchActive(false),
+          fPluginSearchFirstShow(false)
     {
         if (fPlugin == nullptr || fPlugin->fCarlaHostHandle == nullptr)
         {
@@ -447,7 +449,10 @@ protected:
             fPlugins = new PluginInfoCache[count];
 
             if (fDrawingState == kDrawingLoading)
+            {
                 fDrawingState = kDrawingPluginList;
+                fPluginSearchFirstShow = true;
+            }
 
             for (uint i=0, j; i < count && ! shouldThreadExit(); ++i)
             {
@@ -610,7 +615,7 @@ protected:
         PluginGenericUI* const ui = fPluginGenericUI;
         DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
 
-        ImGui::SetNextWindowFocus();
+        // ImGui::SetNextWindowFocus();
 
         if (ImGui::Begin(ui->title, nullptr, ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse))
         {
@@ -684,8 +689,17 @@ protected:
 
         if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
         {
+            if (fPluginSearchFirstShow)
+            {
+                fPluginSearchFirstShow = false;
+                ImGui::SetKeyboardFocusHere();
+            }
+
             if (ImGui::InputText("", fPluginSearchString, sizeof(fPluginSearchString)-1, ImGuiInputTextFlags_CharsNoBlank|ImGuiInputTextFlags_AutoSelectAll))
                 fPluginSearchActive = true;
+
+            if (ImGui::IsKeyDown(ImGuiKey_Escape))
+                fPluginSearchActive = false;
 
             ImGui::BeginDisabled(!fPluginScanningFinished);
 
