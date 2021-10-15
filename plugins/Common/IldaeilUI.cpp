@@ -27,6 +27,25 @@
 
 #include <vector>
 
+// strcasestr
+#ifdef DISTRHO_OS_WINDOWS
+# include <shlwapi.h>
+namespace ildaeil {
+    inline const char* strcasestr(const char* const haystack, const char* const needle)
+    {
+        return StrStrIA(haystack, needle);
+    }
+    // using strcasestr = StrStrIA;
+}
+#else
+namespace ildaeil {
+    using ::strcasestr;
+}
+#endif
+
+// generates a warning if this is defined as anything else
+#define CARLA_API
+
 START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -859,7 +878,7 @@ protected:
                     {
                         const PluginInfoCache& info(fPlugins[i]);
 
-                        if (search != nullptr && strcasestr(info.name, search) == nullptr)
+                        if (search != nullptr && ildaeil::strcasestr(info.name, search) == nullptr)
                             continue;
 
                         bool selected = fPluginSelected == i;

@@ -22,6 +22,9 @@
 
 #include "DistrhoPlugin.hpp"
 
+// generates a warning if this is defined as anything else
+#define CARLA_API
+
 START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------

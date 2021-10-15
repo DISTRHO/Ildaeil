@@ -31,6 +31,9 @@ CARLA_BUILD_TYPE = Release
 endif
 
 EXTRA_LIBS  = $(CARLA_BUILD_DIR)/plugin/$(CARLA_BUILD_TYPE)/carla-host-plugin.cpp.o
+ifneq ($(MACOS),true)
+EXTRA_LIBS += -Wl,--start-group -Wl,--whole-archive
+endif
 EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_engine_plugin.a
 EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_plugin.a
 EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/native-plugins.a
@@ -53,6 +56,14 @@ ifeq ($(USING_JUCE_GUI_EXTRA),true)
 EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/juce_gui_extra.a
 endif
 endif
+ifneq ($(MACOS),true)
+EXTRA_LIBS += -Wl,--no-whole-archive -Wl,--end-group
+endif
+
+# FIXME patch fluidsynth package
+ifeq ($(WIN32),true)
+STATIC_CARLA_PLUGIN_LIBS += -ldsound -lwinmm
+endif
 
 # --------------------------------------------------------------
 # Do some more magic
@@ -71,7 +82,7 @@ BUILD_CXX_FLAGS += -I../../carla/source/includes
 BUILD_CXX_FLAGS += -I../../carla/source/modules
 BUILD_CXX_FLAGS += -I../../carla/source/utils
 
-LINK_FLAGS += $(STATIC_CARLA_PLUGIN_LIBS)
+EXTRA_LIBS += $(STATIC_CARLA_PLUGIN_LIBS)
 
 ifeq ($(MACOS),true)
 $(BUILD_DIR)/../Common/PluginHostWindow.cpp.o: BUILD_CXX_FLAGS += -ObjC++
