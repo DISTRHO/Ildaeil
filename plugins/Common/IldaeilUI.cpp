@@ -295,9 +295,9 @@ public:
             return;
 
         fPluginHostWindow.hide();
+
         if (fDrawingState == kDrawingPluginGenericUI || fDrawingState == kDrawingPluginEmbedUI)
             carla_show_custom_ui(fPlugin->fCarlaHostHandle, 0, false);
-
     }
 
     void createPluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* const info)

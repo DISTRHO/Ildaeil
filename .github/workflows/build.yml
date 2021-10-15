@@ -39,7 +39,7 @@ jobs:
           LDFLAGS: -static-libgcc -static-libstdc++
         run: |
           make features
-          make -j $(nproc)
+          make -j $(nproc) HAVE_LIBMAGIC=false
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -76,7 +76,7 @@ jobs:
           LDFLAGS: -static-libgcc -static-libstdc++
         run: |
           make features
-          make -j $(nproc)
+          make -j $(nproc) HAVE_LIBMAGIC=false
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -105,7 +105,7 @@ jobs:
           PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
         run: |
           make features
-          make -j $(nproc)
+          make -j $(nproc) HAVE_LIBMAGIC=false
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -157,7 +157,7 @@ jobs:
           LDFLAGS: -arch x86_64 -arch arm64 -mmacosx-version-min=10.12
         run: |
           make features
-          make NOOPT=true -j $(sysctl -n hw.logicalcpu)
+          make NOOPT=true HAVE_SNDFILE=false -j $(sysctl -n hw.logicalcpu)
           ./dpf/utils/package-osx-bundles.sh
       - name: Set sha8
         id: slug
