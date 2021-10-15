@@ -16,6 +16,7 @@
  */
 
 #include "CarlaNativePlugin.h"
+#include "CarlaBackendUtils.hpp"
 
 #include "DistrhoUI.hpp"
 #include "DistrhoPlugin.hpp"
@@ -513,6 +514,14 @@ protected:
                 fPlugins[j].label = strdup(info->label);
                 ++fPluginCount;
             }
+        }
+        else
+        {
+            String error("There are no ");
+            error += getPluginTypeAsString(fPluginType);
+            error += " audio plugins on this system.";
+            fPopupError = error;
+            fDrawingState = kDrawingErrorInit;
         }
 
         if (! shouldThreadExit())
