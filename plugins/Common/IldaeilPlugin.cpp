@@ -37,6 +37,9 @@ static bool host_is_offline(NativeHostHandle);
 static const NativeTimeInfo* host_get_time_info(NativeHostHandle handle);
 static bool host_write_midi_event(NativeHostHandle handle, const NativeMidiEvent* event);
 static void host_ui_parameter_changed(NativeHostHandle handle, uint32_t index, float value);
+static void host_ui_midi_program_changed(NativeHostHandle handle, uint8_t channel, uint32_t bank, uint32_t program);
+static void host_ui_custom_data_changed(NativeHostHandle handle, const char* key, const char* value);
+static void host_ui_closed(NativeHostHandle handle);
 static const char* host_ui_open_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
 static const char* host_ui_save_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
 static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpcode opcode, int32_t index, intptr_t value, void* ptr, float opt);
@@ -102,9 +105,9 @@ public:
         fCarlaHostDescriptor.get_time_info = host_get_time_info;
         fCarlaHostDescriptor.write_midi_event = host_write_midi_event;
         fCarlaHostDescriptor.ui_parameter_changed = host_ui_parameter_changed;
-        fCarlaHostDescriptor.ui_midi_program_changed = nullptr;
-        fCarlaHostDescriptor.ui_custom_data_changed = nullptr;
-        fCarlaHostDescriptor.ui_closed = nullptr;
+        fCarlaHostDescriptor.ui_midi_program_changed = host_ui_midi_program_changed;
+        fCarlaHostDescriptor.ui_custom_data_changed = host_ui_custom_data_changed;
+        fCarlaHostDescriptor.ui_closed = host_ui_closed;
         fCarlaHostDescriptor.ui_open_file = host_ui_open_file;
         fCarlaHostDescriptor.ui_save_file = host_ui_save_file;
         fCarlaHostDescriptor.dispatcher = host_dispatcher;
@@ -482,6 +485,21 @@ static bool host_write_midi_event(const NativeHostHandle handle, const NativeMid
 static void host_ui_parameter_changed(const NativeHostHandle handle, const uint32_t index, const float value)
 {
     ildaeilParameterChangeForUI(static_cast<IldaeilPlugin*>(handle)->fUI, index, value);
+}
+
+static void host_ui_midi_program_changed(NativeHostHandle handle, uint8_t channel, uint32_t bank, uint32_t program)
+{
+    d_stdout("%s %p %u %u %u", __FUNCTION__, handle, channel, bank, program);
+}
+
+static void host_ui_custom_data_changed(NativeHostHandle handle, const char* key, const char* value)
+{
+    d_stdout("%s %p %s %s", __FUNCTION__, handle, key, value);
+}
+
+static void host_ui_closed(NativeHostHandle handle)
+{
+    d_stdout("%s %p", __FUNCTION__, handle);
 }
 
 static const char* host_ui_open_file(const NativeHostHandle handle, const bool isDir, const char* const title, const char* const filter)

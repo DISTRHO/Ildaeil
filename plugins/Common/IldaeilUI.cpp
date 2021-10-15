@@ -170,6 +170,8 @@ class IldaeilUI : public UI,
 
     String fPopupError;
 
+    Size<uint> fNextSize;
+
 public:
     IldaeilUI()
         : UI(kInitialWidth, kInitialHeight),
@@ -303,7 +305,7 @@ public:
                 updatePluginGenericUI(handle);
             ImGuiStyle& style(ImGui::GetStyle());
             const double scaleFactor = getScaleFactor();
-            setSize(kGenericWidth * scaleFactor, (kGenericHeight + style.FramePadding.x) * scaleFactor);
+            fNextSize = Size<uint>(kGenericWidth * scaleFactor, (kGenericHeight + style.FramePadding.x) * scaleFactor);
         }
 
         repaint();
@@ -433,9 +435,10 @@ public:
     }
 
 protected:
-    void pluginWindowResized(uint width, uint height) override
+    void pluginWindowResized(const uint width, const uint height) override
     {
-        setSize(width, height + kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2);
+        fNextSize = Size<uint>(width,
+                               height + kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2);
     }
 
     void uiIdle() override
@@ -464,6 +467,13 @@ protected:
 
         default:
             break;
+        }
+
+        if (fNextSize.isValid())
+        {
+            setSize(fNextSize);
+            fNextSize = Size<uint>();
+            return;
         }
     }
 
@@ -554,7 +564,6 @@ protected:
             drawTopBar();
             break;
         }
-
     }
 
     void drawError(const bool open)
@@ -619,7 +628,7 @@ protected:
                 fDrawingState = kDrawingPluginList;
 
                 const double scaleFactor = getScaleFactor();
-                setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
+                fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
             }
 
             ImGui::SameLine();
@@ -666,8 +675,8 @@ protected:
 
                     const double scaleFactor = getScaleFactor();
                     const double padding = ImGui::GetStyle().WindowPadding.y * 2;
-                    setSize(std::max(getWidth(), static_cast<uint>(kGenericWidth * scaleFactor + 0.5)),
-                            (kGenericHeight + kButtonHeight) * scaleFactor + padding);
+                    fNextSize = Size<uint>(std::max(getWidth(), static_cast<uint>(kGenericWidth * scaleFactor + 0.5)),
+                                           (kGenericHeight + kButtonHeight) * scaleFactor + padding);
                 }
             }
         }

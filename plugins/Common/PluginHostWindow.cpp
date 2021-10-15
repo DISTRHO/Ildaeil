@@ -21,6 +21,8 @@
 #elif defined(DISTRHO_OS_MAC)
 # import <Cocoa/Cocoa.h>
 #elif defined(DISTRHO_OS_WINDOWS)
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
 #else
 # define ILDAEIL_X11
 # include <X11/Xlib.h>
@@ -67,11 +69,12 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
     IldaeilPluginView* view;
 #elif defined(DISTRHO_OS_WINDOWS)
+    ::HWND pluginWindow;
 #else
     ::Display* display;
     ::Window pluginWindow;
-    uint xOffset, yOffset;
 #endif
+    uint xOffset, yOffset;
 
     bool lookingForChildren;
 
@@ -83,12 +86,13 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
           view(nullptr),
 #elif defined(DISTRHO_OS_WINDOWS)
+          pluginWindow(nullptr),
 #else
           display(nullptr),
           pluginWindow(0),
+#endif
           xOffset(0),
           yOffset(0),
-#endif
           lookingForChildren(false)
     {
 #if defined(DISTRHO_OS_HAIKU)
@@ -128,7 +132,8 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
         return view;
 #elif defined(DISTRHO_OS_WINDOWS)
-        return nullptr;
+        pluginWindow = nullptr;
+        return (void*)parentWindowId;
 #else
         pluginWindow = 0;
         return (void*)parentWindowId;
@@ -143,6 +148,11 @@ struct PluginHostWindow::PrivateData
             [view setHidden:YES];
         [NSOpenGLContext clearCurrentContext];
 #elif defined(DISTRHO_OS_WINDOWS)
+        if (pluginWindow != nullptr)
+        {
+            ShowWindow(pluginWindow, SW_HIDE);
+            pluginWindow = nullptr;
+        }
 #else
         pluginWindow = 0;
 #endif
@@ -175,6 +185,31 @@ struct PluginHostWindow::PrivateData
                 break;
             }
 #elif defined(DISTRHO_OS_WINDOWS)
+            if (pluginWindow == nullptr)
+                pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
+
+            if (pluginWindow != nullptr)
+            {
+                int width = 0;
+                int height = 0;
+
+                RECT rect;
+                if (GetWindowRect(pluginWindow, &rect))
+                {
+                    width = rect.right - rect.left;
+                    height = rect.bottom - rect.top;
+                }
+
+                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
+
+                if (width > 1 && height > 1)
+                {
+                    lookingForChildren = false;
+                    SetWindowPos(pluginWindow, 0, xOffset, yOffset, 0, 0,
+                                 SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+                    pluginWindowCallbacks->pluginWindowResized(width, height);
+                }
+            }
 #else
             if (pluginWindow == 0)
             {
@@ -260,13 +295,16 @@ struct PluginHostWindow::PrivateData
             [view setFrame:NSMakeRect(x / scaleFactor, y / scaleFactor, width / scaleFactor, height / scaleFactor)];
         }
 #elif defined(DISTRHO_OS_WINDOWS)
+        // unused
+        (void)width;
+        (void)height;
 #else
-        xOffset = x;
-        yOffset = y;
         // unused
         (void)width;
         (void)height;
 #endif
+        xOffset = x;
+        yOffset = y;
     }
 };
 
