@@ -485,7 +485,14 @@ protected:
 
     void run() override
     {
-        if (const uint count = carla_get_cached_plugin_count(fPluginType, nullptr))
+        /*
+        // TESTING
+        const char* const path = "/home/falktx/bin/reaper_linux_x86_64/REAPER/InstallData/Effects";
+
+        carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
+        */
+
+        if (const uint count = carla_get_cached_plugin_count(fPluginType, path))
         {
             fPluginCount = 0;
             fPlugins = new PluginInfoCache[count];
@@ -828,6 +835,8 @@ protected:
                     switch (fPluginType)
                     {
                     case PLUGIN_INTERNAL:
+                    case PLUGIN_JSFX:
+                    case PLUGIN_SFZ:
                         label = info.label;
                         break;
                     case PLUGIN_LV2: {
@@ -878,6 +887,8 @@ protected:
                     switch (fPluginType)
                     {
                     case PLUGIN_INTERNAL:
+                    case PLUGIN_JSFX:
+                    case PLUGIN_SFZ:
                         ImGui::TableSetupColumn("Name");
                         ImGui::TableSetupColumn("Label");
                         ImGui::TableHeadersRow();
@@ -904,6 +915,8 @@ protected:
                         switch (fPluginType)
                         {
                         case PLUGIN_INTERNAL:
+                        case PLUGIN_JSFX:
+                        case PLUGIN_SFZ:
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0);
                             ImGui::Selectable(info.name, &selected);
