@@ -492,7 +492,7 @@ protected:
         carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
         */
 
-        if (const uint count = carla_get_cached_plugin_count(fPluginType, path))
+        if (const uint count = carla_get_cached_plugin_count(fPluginType, nullptr))
         {
             fPluginCount = 0;
             fPlugins = new PluginInfoCache[count];
