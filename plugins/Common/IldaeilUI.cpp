@@ -28,6 +28,9 @@
 
 #include <vector>
 
+// TODO remove this after JSFX is merged
+#define PLUGIN_JSFX 99
+
 // strcasestr
 #ifdef DISTRHO_OS_WINDOWS
 # include <shlwapi.h>
