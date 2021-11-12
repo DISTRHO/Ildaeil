@@ -488,14 +488,25 @@ protected:
 
     void run() override
     {
-        /*
-        // TESTING
-        const char* const path = "/home/falktx/bin/reaper_linux_x86_64/REAPER/InstallData/Effects";
+        const char* path;
 
-        carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
+        switch (fPluginType)
+        {
+        case PLUGIN_LV2:
+            path = std::getenv("LV2_PATH");
+            break;
+        default:
+            path = nullptr;
+            break;
+        }
+        /* TESTING
+        const char* const path = "/home/falktx/bin/reaper_linux_x86_64/REAPER/InstallData/Effects";
         */
 
-        if (const uint count = carla_get_cached_plugin_count(fPluginType, nullptr))
+        if (path != nullptr)
+            carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
+
+        if (const uint count = carla_get_cached_plugin_count(fPluginType, path))
         {
             fPluginCount = 0;
             fPlugins = new PluginInfoCache[count];

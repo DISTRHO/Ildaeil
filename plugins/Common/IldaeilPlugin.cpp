@@ -126,6 +126,9 @@ public:
         carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
 #endif
 
+        if (const char* const path = std::getenv("LV2_PATH"))
+            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LV2, path);
+
         fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_HOST_USES_EMBED,
                                            0, 0, nullptr, 0.0f);
 
