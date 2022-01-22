@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,11 +15,10 @@
  * For a full copy of the GNU General Public License see the LICENSE file.
  */
 
-#include "CarlaNativePlugin.h"
-#include "CarlaBackendUtils.hpp"
-
+#include "IldaeilBasePlugin.hpp"
 #include "DistrhoUI.hpp"
-#include "DistrhoPlugin.hpp"
+
+#include "CarlaBackendUtils.hpp"
 #include "PluginHostWindow.hpp"
 #include "extra/Thread.hpp"
 
@@ -44,25 +43,7 @@ namespace ildaeil {
 }
 #endif
 
-// generates a warning if this is defined as anything else
-#define CARLA_API
-
 START_NAMESPACE_DISTRHO
-
-// --------------------------------------------------------------------------------------------------------------------
-class IldaeilPlugin : public Plugin
-{
-public:
-    const NativePluginDescriptor* fCarlaPluginDescriptor;
-    NativePluginHandle fCarlaPluginHandle;
-
-    NativeHostDescriptor fCarlaHostDescriptor;
-    CarlaHostHandle fCarlaHostHandle;
-
-    void* fUI;
-
-    // ...
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -71,9 +52,6 @@ const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const 
 
 // --------------------------------------------------------------------------------------------------------------------
 using namespace CarlaBackend;
-
-// shared resource pointer
-// carla_juce_init();
 
 class IldaeilUI : public UI,
                   public Thread,
@@ -164,7 +142,7 @@ class IldaeilUI : public UI,
         kIdleNothing
     } fIdleState = kIdleInit;
 
-    IldaeilPlugin* const fPlugin;
+    IldaeilBasePlugin* const fPlugin;
     PluginHostWindow fPluginHostWindow;
 
     PluginType fPluginType;
@@ -194,7 +172,7 @@ public:
           Thread("IldaeilScanner"),
           fDrawingState(kDrawingLoading),
           fIdleState(kIdleInit),
-          fPlugin((IldaeilPlugin*)getPluginInstancePointer()),
+          fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
           fPluginHostWindow(getWindow(), this),
           fPluginType(PLUGIN_LV2),
           fNextPluginType(fPluginType),

@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -15,15 +15,11 @@
  * For a full copy of the GNU General Public License see the LICENSE file.
  */
 
-#include "CarlaNativePlugin.h"
+#include "IldaeilBasePlugin.hpp"
+
 #include "CarlaEngine.hpp"
 #include "water/streams/MemoryOutputStream.h"
 #include "water/xml/XmlDocument.h"
-
-#include "DistrhoPlugin.hpp"
-
-// generates a warning if this is defined as anything else
-#define CARLA_API
 
 START_NAMESPACE_DISTRHO
 
@@ -51,30 +47,8 @@ const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const 
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// static Mutex sPluginInfoLoadMutex;
-
-/*
-struct JuceInitializer {
-    JuceInitializer() { carla_juce_init(); }
-    ~JuceInitializer() { carla_juce_cleanup(); }
-};
-*/
-
-// --------------------------------------------------------------------------------------------------------------------
-
-class IldaeilPlugin : public Plugin
+class IldaeilPlugin : public IldaeilBasePlugin
 {
-    // SharedResourcePointer<JuceInitializer> juceInitializer;
-
-public:
-    const NativePluginDescriptor* fCarlaPluginDescriptor;
-    NativePluginHandle fCarlaPluginHandle;
-
-    NativeHostDescriptor fCarlaHostDescriptor;
-    CarlaHostHandle fCarlaHostHandle;
-
-    void* fUI;
-
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
     static constexpr const uint kMaxMidiEventCount = 512;
     NativeMidiEvent* fMidiEvents;
@@ -87,12 +61,9 @@ public:
     mutable water::MemoryOutputStream fLastProjectState;
     uint32_t fLastLatencyValue;
 
+public:
     IldaeilPlugin()
-        : Plugin(0, 0, 1),
-          fCarlaPluginDescriptor(nullptr),
-          fCarlaPluginHandle(nullptr),
-          fCarlaHostHandle(nullptr),
-          fUI(nullptr),
+        : IldaeilBasePlugin(),
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
           fMidiEvents(nullptr),
           fMidiEventCount(0),
@@ -103,7 +74,6 @@ public:
         fCarlaPluginDescriptor = carla_get_native_rack_plugin();
         DISTRHO_SAFE_ASSERT_RETURN(fCarlaPluginDescriptor != nullptr,);
 
-        memset(&fCarlaHostDescriptor, 0, sizeof(fCarlaHostDescriptor));
         memset(&fCarlaTimeInfo, 0, sizeof(fCarlaTimeInfo));
 
         fCarlaHostDescriptor.handle = this;
