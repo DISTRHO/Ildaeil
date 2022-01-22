@@ -473,8 +473,9 @@ public:
 protected:
     void pluginWindowResized(const uint width, const uint height) override
     {
-        fNextSize = Size<uint>(width,
-                               height + kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2);
+        const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
+
+        fNextSize = Size<uint>(width, height + extraHeight);
     }
 
     void uiIdle() override

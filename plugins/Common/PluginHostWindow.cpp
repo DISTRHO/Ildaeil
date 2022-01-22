@@ -187,29 +187,6 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
                 pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
-
-            if (pluginWindow != nullptr)
-            {
-                int width = 0;
-                int height = 0;
-
-                RECT rect;
-                if (GetWindowRect(pluginWindow, &rect))
-                {
-                    width = rect.right - rect.left;
-                    height = rect.bottom - rect.top;
-                }
-
-                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
-
-                if (width > 1 && height > 1)
-                {
-                    lookingForChildren = false;
-                    SetWindowPos(pluginWindow, 0, xOffset, yOffset, 0, 0,
-                                 SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER);
-                    pluginWindowCallbacks->pluginWindowResized(width, height);
-                }
-            }
 #else
             if (pluginWindow == 0)
             {
@@ -225,61 +202,88 @@ struct PluginHostWindow::PrivateData
                     XFree(childWindows);
                 }
             }
-
-            if (pluginWindow != 0)
-            {
-                int width = 0;
-                int height = 0;
-
-                XWindowAttributes attrs;
-                memset(&attrs, 0, sizeof(attrs));
-
-                pthread_mutex_lock(&gErrorMutex);
-                const XErrorHandler oldErrorHandler = XSetErrorHandler(ildaeilErrorHandler);
-                gErrorTriggered = false;
-
-                if (XGetWindowAttributes(display, pluginWindow, &attrs) && ! gErrorTriggered)
-                {
-                    width = attrs.width;
-                    height = attrs.height;
-                }
-
-                XSetErrorHandler(oldErrorHandler);
-                pthread_mutex_unlock(&gErrorMutex);
-
-                if (width == 0 && height == 0)
-                {
-                    XSizeHints sizeHints;
-                    memset(&sizeHints, 0, sizeof(sizeHints));
-
-                    if (XGetNormalHints(display, pluginWindow, &sizeHints))
-                    {
-                        if (sizeHints.flags & PSize)
-                        {
-                            width = sizeHints.width;
-                            height = sizeHints.height;
-                        }
-                        else if (sizeHints.flags & PBaseSize)
-                        {
-                            width = sizeHints.base_width;
-                            height = sizeHints.base_height;
-                        }
-                    }
-                }
-
-                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
-
-                if (width > 1 && height > 1)
-                {
-                    lookingForChildren = false;
-                    XMoveWindow(display, pluginWindow, xOffset, yOffset);
-                    pluginWindowCallbacks->pluginWindowResized(width, height);
-                }
-            }
 #endif
         }
 
-#ifdef ILDAEIL_X11
+#if defined(DISTRHO_OS_HAIKU)
+#elif defined(DISTRHO_OS_MAC)
+#elif defined(DISTRHO_OS_WINDOWS)
+        if (pluginWindow != nullptr)
+        {
+            int width = 0;
+            int height = 0;
+
+            RECT rect;
+            if (GetWindowRect(pluginWindow, &rect))
+            {
+                width = rect.right - rect.left;
+                height = rect.bottom - rect.top;
+            }
+
+            if (lookingForChildren)
+                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
+
+            if (width > 1 && height > 1)
+            {
+                lookingForChildren = false;
+                SetWindowPos(pluginWindow, 0, xOffset, yOffset, 0, 0,
+                             SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+                pluginWindowCallbacks->pluginWindowResized(width, height);
+            }
+        }
+#else
+        if (pluginWindow != 0)
+        {
+            int width = 0;
+            int height = 0;
+
+            XWindowAttributes attrs;
+            memset(&attrs, 0, sizeof(attrs));
+
+            pthread_mutex_lock(&gErrorMutex);
+            const XErrorHandler oldErrorHandler = XSetErrorHandler(ildaeilErrorHandler);
+            gErrorTriggered = false;
+
+            if (XGetWindowAttributes(display, pluginWindow, &attrs) && ! gErrorTriggered)
+            {
+                width = attrs.width;
+                height = attrs.height;
+            }
+
+            XSetErrorHandler(oldErrorHandler);
+            pthread_mutex_unlock(&gErrorMutex);
+
+            if (width == 0 && height == 0)
+            {
+                XSizeHints sizeHints;
+                memset(&sizeHints, 0, sizeof(sizeHints));
+
+                if (XGetNormalHints(display, pluginWindow, &sizeHints))
+                {
+                    if (sizeHints.flags & PSize)
+                    {
+                        width = sizeHints.width;
+                        height = sizeHints.height;
+                    }
+                    else if (sizeHints.flags & PBaseSize)
+                    {
+                        width = sizeHints.base_width;
+                        height = sizeHints.base_height;
+                    }
+                }
+            }
+
+            if (lookingForChildren)
+                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
+
+            if (width > 1 && height > 1)
+            {
+                lookingForChildren = false;
+                XMoveWindow(display, pluginWindow, xOffset, yOffset);
+                pluginWindowCallbacks->pluginWindowResized(width, height);
+            }
+        }
+
         for (XEvent event; XPending(display) > 0;)
             XNextEvent(display, &event);
 #endif

@@ -28,7 +28,7 @@ CARLA_EXTRA_ARGS += USING_JUCE_GUI_EXTRA=false
 # --------------------------------------------------------------
 
 carla:
-	$(MAKE) static-plugin -C carla $(CARLA_EXTRA_ARGS) \
+	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS) \
 		CAN_GENERATE_LV2_TTL=false \
 		STATIC_PLUGIN_TARGET=true
 
