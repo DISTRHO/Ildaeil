@@ -88,6 +88,7 @@ jobs:
         env:
           PKG_CONFIG_PATH: /usr/lib/arm-linux-gnueabihf/pkgconfig
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux-armhf
       - name: Build linux armhf cross-compiled
         run: |
@@ -129,6 +130,7 @@ jobs:
         env:
           PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux-i686
       - name: Build linux i686
         run: |
@@ -162,6 +164,7 @@ jobs:
           sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - name: Build extra dependencies
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux
       - name: Build linux x86_64
         run: |
@@ -195,6 +198,7 @@ jobs:
           sudo xcode-select -s "/Applications/Xcode_12.3.app"
       - name: Build extra dependencies
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh macos-universal
       - name: Build macOS universal
         run: |
@@ -241,6 +245,7 @@ jobs:
           sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable:i386
       - name: Build extra dependencies
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh win32
       - name: Build win32 cross-compiled
         run: |
@@ -281,6 +286,7 @@ jobs:
           sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine-stable
       - name: Build extra dependencies
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh win64
       - name: Build win64 cross-compiled
         run: |

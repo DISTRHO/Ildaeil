@@ -25,7 +25,9 @@ START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
 
-using namespace CarlaBackend;
+Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 static uint32_t host_get_buffer_size(NativeHostHandle);
 static double host_get_sample_rate(NativeHostHandle);
@@ -42,10 +44,7 @@ static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpc
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
-const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
-
-// --------------------------------------------------------------------------------------------------------------------
+using namespace CarlaBackend;
 
 class IldaeilPlugin : public IldaeilBasePlugin
 {
@@ -321,12 +320,12 @@ protected:
             water::XmlDocument xml(value);
 
             {
-                // const MutexLocker cml(sPluginInfoLoadMutex);
+                const MutexLocker cml(sPluginInfoLoadMutex);
                 engine->loadProjectInternal(xml, true);
             }
 
-            // xx cardinal
-            // projectLoadedFromDSP(fUI);
+            if (fUI != nullptr)
+                ildaeilProjectLoadedFromDSP(fUI);
         }
     }
 

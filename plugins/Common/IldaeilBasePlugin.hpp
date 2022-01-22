@@ -19,6 +19,7 @@
 
 #include "CarlaNativePlugin.h"
 #include "DistrhoPlugin.hpp"
+#include "extra/Mutex.hpp"
 
 // generates a warning if this is defined as anything else
 #define CARLA_API
@@ -27,15 +28,11 @@ START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// static Mutex sPluginInfoLoadMutex;
-
-// --------------------------------------------------------------------------------------------------------------------
-
 class IldaeilBasePlugin : public Plugin
 {
-    // SharedResourcePointer<JuceInitializer> juceInitializer;
-
 public:
+    static Mutex sPluginInfoLoadMutex;
+
     const NativePluginDescriptor* fCarlaPluginDescriptor;
     NativePluginHandle fCarlaPluginHandle;
 
@@ -54,6 +51,12 @@ public:
         memset(&fCarlaHostDescriptor, 0, sizeof(fCarlaHostDescriptor));
     }
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void ildaeilProjectLoadedFromDSP(void* ui);
+void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
 
 // --------------------------------------------------------------------------------------------------------------------
 

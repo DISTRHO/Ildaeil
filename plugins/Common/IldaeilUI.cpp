@@ -47,10 +47,6 @@ START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
-const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
-
-// --------------------------------------------------------------------------------------------------------------------
 using namespace CarlaBackend;
 
 class IldaeilUI : public UI,
@@ -455,8 +451,7 @@ public:
 
         carla_set_engine_option(handle, ENGINE_OPTION_PREFER_PLUGIN_BRIDGES, fPluginWillRunInBridgeMode, nullptr);
 
-        // xx cardinal
-        // const MutexLocker cml(sPluginInfoLoadMutex);
+        const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
 
         if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
                              label, 0, 0x0, PLUGIN_OPTIONS_NULL))
@@ -622,12 +617,15 @@ protected:
         fPluginCount = 0;
         delete[] fPlugins;
 
-        // xx cardinal
-        // const MutexLocker cml(sPluginInfoLoadMutex);
+        uint count;
 
-        d_stdout("Will scan plugins now...");
-        const uint count = carla_get_cached_plugin_count(fPluginType, path);
-        d_stdout("Scanning found %u plugins", count);
+        {
+            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+
+            d_stdout("Will scan plugins now...");
+            count = carla_get_cached_plugin_count(fPluginType, path);
+            d_stdout("Scanning found %u plugins", count);
+        }
 
         if (fDrawingState == kDrawingLoading)
         {
@@ -641,6 +639,8 @@ protected:
 
             for (uint i=0, j; i < count && ! shouldThreadExit(); ++i)
             {
+                const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+
                 const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(fPluginType, i);
                 DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
 
@@ -1101,6 +1101,13 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+void ildaeilProjectLoadedFromDSP(void* const ui)
+{
+    DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+    static_cast<IldaeilUI*>(ui)->projectLoadedFromDSP();
+}
 
 void ildaeilParameterChangeForUI(void* const ui, const uint32_t index, const float value)
 {
