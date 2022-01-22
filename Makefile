@@ -16,14 +16,33 @@ CARLA_EXTRA_ARGS = \
 	HAVE_FLUIDSYNTH=false \
 	HAVE_PROJECTM=false \
 	HAVE_ZYN_DEPS=false \
-	HAVE_ZYN_UI_DEPS=false
+	HAVE_ZYN_UI_DEPS=false \
+	USING_JUCE=false \
+	USING_JUCE_GUI_EXTRA=false
 
 ifneq ($(DEBUG),true)
 CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
 endif
 
-CARLA_EXTRA_ARGS += USING_JUCE=false
-CARLA_EXTRA_ARGS += USING_JUCE_GUI_EXTRA=false
+# --------------------------------------------------------------
+# Check for X11+OpenGL dependencies
+
+ifneq ($(HAIKU_OR_MACOS_OR_WINDOWS),true)
+
+ifneq ($(HAVE_OPENGL),true)
+$(error OpenGL dependency not installed/available)
+endif
+ifneq ($(HAVE_X11),true)
+$(error X11 dependency not installed/available)
+endif
+ifneq ($(HAVE_XEXT),true)
+$(warning Xext dependency not installed/available)
+endif
+ifneq ($(HAVE_XRANDR),true)
+$(warning Xrandr dependency not installed/available)
+endif
+
+endif
 
 # --------------------------------------------------------------
 

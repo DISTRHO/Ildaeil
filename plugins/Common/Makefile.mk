@@ -52,6 +52,7 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 # --------------------------------------------------------------
 # Do some more magic
 
+USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
 
 BUILD_CXX_FLAGS += -pthread
@@ -74,6 +75,18 @@ endif
 # --------------------------------------------------------------
 # Enable all possible plugin types
 
-all: jack lv2 vst2 vst3
+all: jack lv2 vst2 vst3 carlabins
+
+# --------------------------------------------------------------
+# special step for carla binaries
+
+CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-bridge-native$(APP_EXT)
+CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk2$(APP_EXT)
+CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
+
+carlabins: lv2 vst2 vst3
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst2))
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst3))
 
 # --------------------------------------------------------------
