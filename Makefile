@@ -9,9 +9,26 @@ include dpf/Makefile.base.mk
 all: carla dgl plugins gen
 
 # --------------------------------------------------------------
+# Carla config
+
+CARLA_EXTRA_ARGS = \
+	HAVE_FFMPEG=false \
+	HAVE_FLUIDSYNTH=false \
+	HAVE_PROJECTM=false \
+	HAVE_ZYN_DEPS=false \
+	HAVE_ZYN_UI_DEPS=false
+
+ifneq ($(DEBUG),true)
+CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
+endif
+
+CARLA_EXTRA_ARGS += USING_JUCE=false
+CARLA_EXTRA_ARGS += USING_JUCE_GUI_EXTRA=false
+
+# --------------------------------------------------------------
 
 carla:
-	$(MAKE) -C carla plugin \
+	$(MAKE) static-plugin -C carla $(CARLA_EXTRA_ARGS) \
 		CAN_GENERATE_LV2_TTL=false \
 		STATIC_PLUGIN_TARGET=true
 
