@@ -18,6 +18,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: linux-arm64-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -31,16 +37,18 @@ jobs:
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-aarch64-linux-gnu libasound2-dev:arm64 libcairo2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 liblo-dev:arm64 libpulse-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 qemu-user-static
-      - name: Build linux arm64 cross-compiled
+          sudo apt-get install -yqq g++-aarch64-linux-gnu libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 qemu-user-static
+      - name: Build extra dependencies
         env:
-          CC: aarch64-linux-gnu-gcc
-          CXX: aarch64-linux-gnu-g++
-          LDFLAGS: -static-libgcc -static-libstdc++
           PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
         run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
+          ./PawPaw/bootstrap-cardinal.sh linux-aarch64
+      - name: Build linux arm64 cross-compiled
+        run: |
+          pushd PawPaw; source local.env linux-aarch64; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
