@@ -64,6 +64,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: linux-armhf-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -77,16 +83,17 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-arm-linux-gnueabihf libasound2-dev:armhf libcairo2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf liblo-dev:armhf libpulse-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf qemu-user-static
-      - name: Build linux armhf cross-compiled
+          sudo apt-get install -yqq g++-arm-linux-gnueabihf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf qemu-user-static
+      - name: Build extra dependencies
         env:
-          CC: arm-linux-gnueabihf-gcc
-          CXX: arm-linux-gnueabihf-g++
-          LDFLAGS: -static-libgcc -static-libstdc++
           PKG_CONFIG_PATH: /usr/lib/arm-linux-gnueabihf/pkgconfig
         run: |
+          ./PawPaw/bootstrap-cardinal.sh linux-armhf
+      - name: Build linux armhf cross-compiled
+        run: |
+          pushd PawPaw; source local.env linux-armhf; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -102,6 +109,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: linux-i686-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -111,18 +124,17 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libcairo2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 liblo-dev:i386 libpulse-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
-      - name: Build linux i686
+          sudo apt-get install -yqq g++-multilib libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
+      - name: Build extra dependencies
         env:
-          CC: i686-linux-gnu-gcc
-          CXX: i686-linux-gnu-g++
-          CFLAGS: -m32
-          CXXFLAGS: -m32
-          LDFLAGS: -m32 -static-libgcc -static-libstdc++
           PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
         run: |
+          ./PawPaw/bootstrap-cardinal.sh linux-i686
+      - name: Build linux i686
+        run: |
+          pushd PawPaw; source local.env linux-i686; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -138,16 +150,24 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: linux-x86_64-v${{ env.CACHE_VERSION }}
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -yqq libasound2-dev libcairo2-dev libdbus-1-dev libgl1-mesa-dev liblo-dev libpulse-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
-      - name: Build linux x86_64
-        env:
-          LDFLAGS: -static-libgcc -static-libstdc++
+          sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+      - name: Build extra dependencies
         run: |
+          ./PawPaw/bootstrap-cardinal.sh linux
+      - name: Build linux x86_64
+        run: |
+          pushd PawPaw; source local.env linux; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -163,16 +183,22 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: macos-universal-v${{ env.CACHE_VERSION }}
       - name: Fix up Xcode
         run: |
           sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
           sudo xcode-select -s "/Applications/Xcode_12.3.app"
-      - name: Build macOS universal
-        env:
-          CFLAGS: -arch x86_64 -arch arm64 -DMAC_OS_X_VERSION_MAX_ALLOWED=MAC_OS_X_VERSION_10_12 -mmacosx-version-min=10.12 -mtune=generic -msse -msse2
-          CXXFLAGS: -arch x86_64 -arch arm64 -DMAC_OS_X_VERSION_MAX_ALLOWED=MAC_OS_X_VERSION_10_12 -mmacosx-version-min=10.12 -mtune=generic -msse -msse2
-          LDFLAGS: -arch x86_64 -arch arm64 -mmacosx-version-min=10.12
+      - name: Build extra dependencies
         run: |
+          ./PawPaw/bootstrap-cardinal.sh macos-universal
+      - name: Build macOS universal
+        run: |
+          pushd PawPaw; source local.env macos-universal; popd
           make features
           make NOOPT=true WITH_LTO=true -j $(sysctl -n hw.logicalcpu)
           ./dpf/utils/package-osx-bundles.sh
@@ -197,6 +223,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: win32-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -207,16 +239,14 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable:i386
-      - name: Build win32 cross-compiled
-        env:
-          CC: i686-w64-mingw32-gcc
-          CXX: i686-w64-mingw32-g++
-          EXE_WRAPPER: wine
-          PKG_CONFIG: "false"
-          WINEDEBUG: "-all"
+      - name: Build extra dependencies
         run: |
+          ./PawPaw/bootstrap-cardinal.sh win32
+      - name: Build win32 cross-compiled
+        run: |
+          pushd PawPaw; source local.env win32; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -234,20 +264,29 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: win64-v${{ env.CACHE_VERSION }}
+      - name: Fix GitHub's mess
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update -qq
+          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine-stable
-      - name: Build win64 cross-compiled
-        env:
-          CC: x86_64-w64-mingw32-gcc
-          CXX: x86_64-w64-mingw32-g++
-          EXE_WRAPPER: wine
-          PKG_CONFIG: "false"
-          WINEDEBUG: "-all"
+      - name: Build extra dependencies
         run: |
+          ./PawPaw/bootstrap-cardinal.sh win64
+      - name: Build win64 cross-compiled
+        run: |
+          pushd PawPaw; source local.env win64; popd
           make features
-          make WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -272,7 +311,7 @@ jobs:
           sudo dpkg -i kxstudio-repos_10.0.3_all.deb
           sudo apt-get update -qq
           # build-deps
-          sudo apt-get install -yqq libasound2-dev libcairo2-dev libdbus-1-dev libgl1-mesa-dev liblo-dev libpulse-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libgl1-mesa-dev liblo-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
           # runtime testing
           sudo apt-get install -yqq carla-git lilv-utils lv2-dev lv2lint valgrind
       - name: Build plugins
@@ -299,28 +338,6 @@ jobs:
               /usr/lib/lv2/{atom,buf-size,core,data-access,kx-control-input-port-change-request,kx-programs,instance-access,midi,parameters,port-groups,port-props,options,patch,presets,resize-port,state,time,ui,units,urid,worker}.lv2 \
               ${LV2_PATH}
           lv2lint -s lv2_generate_ttl -l ld-linux-x86-64.so.2 -M nopack $(lv2ls)
-      - name: Test LADSPA plugins
-        run: |
-            for p in $(ls bin/ | grep ladspa.so); do \
-                env CARLA_BRIDGE_DUMMY=1 CARLA_BRIDGE_TESTING=native \
-                    valgrind \
-                    --error-exitcode=255 \
-                    --leak-check=full \
-                    --track-origins=yes \
-                    --suppressions=./dpf/utils/valgrind-dpf.supp \
-                    /usr/lib/carla/carla-bridge-native ladspa ./bin/${p} "" 1>/dev/null; \
-            done
-      - name: Test DSSI plugins
-        run: |
-            for p in $(ls bin/ | grep dssi.so); do \
-                env CARLA_BRIDGE_DUMMY=1 CARLA_BRIDGE_TESTING=native \
-                    valgrind \
-                    --error-exitcode=255 \
-                    --leak-check=full \
-                    --track-origins=yes \
-                    --suppressions=./dpf/utils/valgrind-dpf.supp \
-                    /usr/lib/carla/carla-bridge-native dssi ./bin/${p} "" 1>/dev/null; \
-            done
       - name: Test LV2 plugins
         run: |
             export LV2_PATH=/tmp/lv2-path
