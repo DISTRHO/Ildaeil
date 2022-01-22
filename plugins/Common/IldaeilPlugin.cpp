@@ -51,8 +51,21 @@ const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const 
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// static Mutex sPluginInfoLoadMutex;
+
+/*
+struct JuceInitializer {
+    JuceInitializer() { carla_juce_init(); }
+    ~JuceInitializer() { carla_juce_cleanup(); }
+};
+*/
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class IldaeilPlugin : public Plugin
 {
+    // SharedResourcePointer<JuceInitializer> juceInitializer;
+
 public:
     const NativePluginDescriptor* fCarlaPluginDescriptor;
     NativePluginHandle fCarlaPluginHandle;
@@ -336,7 +349,14 @@ protected:
             CarlaEngine* const engine = carla_get_engine_from_handle(fCarlaHostHandle);
 
             water::XmlDocument xml(value);
-            engine->loadProjectInternal(xml, true);
+
+            {
+                // const MutexLocker cml(sPluginInfoLoadMutex);
+                engine->loadProjectInternal(xml, true);
+            }
+
+            // xx cardinal
+            // projectLoadedFromDSP(fUI);
         }
     }
 
