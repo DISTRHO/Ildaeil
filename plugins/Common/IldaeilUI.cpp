@@ -47,7 +47,7 @@ START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
 
-using namespace CarlaBackend;
+using namespace CARLA_BACKEND_NAMESPACE;
 
 class IldaeilUI : public UI,
                   public Thread,

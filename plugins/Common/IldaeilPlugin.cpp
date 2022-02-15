@@ -44,7 +44,7 @@ static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpc
 
 // --------------------------------------------------------------------------------------------------------------------
 
-using namespace CarlaBackend;
+using namespace CARLA_BACKEND_NAMESPACE;
 
 class IldaeilPlugin : public IldaeilBasePlugin
 {

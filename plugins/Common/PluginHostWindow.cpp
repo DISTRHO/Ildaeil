@@ -32,18 +32,6 @@
 
 #include "PluginHostWindow.hpp"
 
-#ifdef DISTRHO_OS_MAC
-@interface IldaeilPluginView : NSView
-- (void)resizeWithOldSuperviewSize:(NSSize)oldSize;
-@end
-@implementation IldaeilPluginView
-- (void)resizeWithOldSuperviewSize:(NSSize)oldSize
-{
-    [super resizeWithOldSuperviewSize:oldSize];
-}
-@end
-#endif
-
 START_NAMESPACE_DGL
 
 #if defined(DISTRHO_OS_HAIKU)
@@ -67,7 +55,8 @@ struct PluginHostWindow::PrivateData
 
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-    IldaeilPluginView* view;
+    NSView* view;
+    NSView* subview;
 #elif defined(DISTRHO_OS_WINDOWS)
     ::HWND pluginWindow;
 #else
@@ -85,6 +74,7 @@ struct PluginHostWindow::PrivateData
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
           view(nullptr),
+          subview(nullptr),
 #elif defined(DISTRHO_OS_WINDOWS)
           pluginWindow(nullptr),
 #else
@@ -97,11 +87,10 @@ struct PluginHostWindow::PrivateData
     {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-        view = [[IldaeilPluginView new]retain];
+        view = [[NSView new]retain];
         DISTRHO_SAFE_ASSERT_RETURN(view != nullptr,)
-
         [view setAutoresizingMask:NSViewNotSizable];
-        [view setAutoresizesSubviews:YES];
+        [view setAutoresizesSubviews:NO];
         [view setHidden:YES];
         [(NSView*)parentWindowId addSubview:view];
 #elif defined(DISTRHO_OS_WINDOWS)
@@ -130,6 +119,7 @@ struct PluginHostWindow::PrivateData
 #if defined(DISTRHO_OS_HAIKU)
         return nullptr;
 #elif defined(DISTRHO_OS_MAC)
+        subview = nullptr;
         return view;
 #elif defined(DISTRHO_OS_WINDOWS)
         pluginWindow = nullptr;
@@ -167,27 +157,21 @@ struct PluginHostWindow::PrivateData
             if (view == nullptr)
                 return;
 
-            for (NSView* subview in [view subviews])
+            if (subview == nullptr)
             {
-                const double scaleFactor = [[[view window] screen] backingScaleFactor];
-                const NSSize size = [subview frame].size;
-                const double width = size.width;
-                const double height = size.height;
-
-                if (width <= 1 || height <= 1)
+                for (NSView* subview2 in [view subviews])
+                {
+                    subview = subview2;
                     break;
-
-                lookingForChildren = false;
-                [view setFrameSize:size];
-                [view setHidden:NO];
-                [view setNeedsDisplay:YES];
-                pluginWindowCallbacks->pluginWindowResized(width * scaleFactor, height * scaleFactor);
-                break;
+                }
             }
 #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
                 pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
 #else
+            if (display == nullptr)
+                return;
+
             if (pluginWindow == 0)
             {
                 ::Window rootWindow, parentWindow;
@@ -207,6 +191,25 @@ struct PluginHostWindow::PrivateData
 
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
+        if (subview != nullptr)
+        {
+            const double scaleFactor = [[[view window] screen] backingScaleFactor];
+            const NSSize size = [subview frame].size;
+            const double width = size.width;
+            const double height = size.height;
+
+            if (lookingForChildren)
+                d_stdout("child window bounds %f %f | offset %u %u", width, height, xOffset, yOffset);
+
+            if (width > 1.0 && height > 1.0)
+            {
+                lookingForChildren = false;
+                [view setFrameSize:size];
+                [view setHidden:NO];
+                [view setNeedsDisplay:YES];
+                pluginWindowCallbacks->pluginWindowResized(width * scaleFactor, height * scaleFactor);
+            }
+        }
 #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
@@ -221,7 +224,7 @@ struct PluginHostWindow::PrivateData
             }
 
             if (lookingForChildren)
-                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
+                d_stdout("child window bounds %i %i | offset %u %u", width, height, xOffset, yOffset);
 
             if (width > 1 && height > 1)
             {
@@ -274,7 +277,7 @@ struct PluginHostWindow::PrivateData
             }
 
             if (lookingForChildren)
-                d_stdout("child window bounds %u %u | offset %u %u", width, height, xOffset, yOffset);
+                d_stdout("child window bounds %i %i | offset %u %u", width, height, xOffset, yOffset);
 
             if (width > 1 && height > 1)
             {
