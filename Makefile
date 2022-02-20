@@ -6,7 +6,16 @@
 
 include dpf/Makefile.base.mk
 
+# --------------------------------------------------------------
+# Build targets
+
 all: carla dgl plugins gen
+
+# --------------------------------------------------------------
+# Build config
+
+PREFIX  ?= /usr/local
+DESTDIR ?=
 
 # --------------------------------------------------------------
 # Carla config
