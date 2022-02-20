@@ -548,7 +548,8 @@ protected:
 
         case kIdleChangePluginType:
             fIdleState = kIdleNothing;
-            hidePluginUI(handle);
+            if (fPluginRunning)
+                hidePluginUI(handle);
             fPluginSelected = -1;
             if (isThreadRunning())
                 stopThread(-1);
@@ -648,18 +649,25 @@ protected:
                 if (! info->valid)
                     continue;
 
-                #if DISTRHO_PLUGIN_IS_SYNTH
-                if (info->midiIns != 1 || (info->audioOuts != 1 && info->audioOuts != 2))
+                if (info->cvIns != 0 || info->cvOuts != 0)
                     continue;
-                if ((info->hints & PLUGIN_IS_SYNTH) == 0x0)
+
+                #if DISTRHO_PLUGIN_IS_SYNTH
+                if (info->midiIns != 1 && info->audioIns != 0)
+                    continue;
+                if ((info->hints & PLUGIN_IS_SYNTH) == 0x0 && info->audioIns != 0)
+                    continue;
+                if (info->audioOuts != 1 && info->audioOuts != 2)
                     continue;
                 #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-                if (info->midiIns != 1 || info->midiOuts != 1)
+                if ((info->midiIns != 1 && info->audioIns != 0 && info->audioOuts != 0) || info->midiOuts != 1)
                     continue;
                 if (info->audioIns != 0 || info->audioOuts != 0)
                     continue;
                 #else
-                if (info->audioIns != 2 || info->audioOuts != 2)
+                if (info->audioIns != 1 && info->audioIns != 2)
+                    continue;
+                if (info->audioOuts != 1 && info->audioOuts != 2)
                     continue;
                 #endif
 

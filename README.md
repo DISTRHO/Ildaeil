@@ -34,6 +34,8 @@ The current formats Ildaeil can work as are:
 - VST3
 
 And it can load the following plugin formats:
+
+- Internal (from Carla)
 - LV2
 
 ## Goals
@@ -45,10 +47,9 @@ Later on, in theory, should be able to load the following plugin formats:
 - VST2
 - VST3
 - AU (macOS only)
+- JSFX
 
 Additionally the following files could eventually be loaded:
 
-- Audio files (synced to host transport)
-- MIDI files (aligned to real/wall-clock time, synced to host transport)
 - SF2/3 files (through internal FluidSynth)
 - SFZ files (through internal SFZero)
