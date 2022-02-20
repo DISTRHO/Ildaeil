@@ -71,6 +71,32 @@ endif
 
 # --------------------------------------------------------------
 
+install:
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2
+	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2
+	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-Synth.lv2
+	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-FX.vst
+	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-MIDI.vst
+	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-Synth.vst
+	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/Contents
+	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-MIDI.vst3/Contents
+	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/Contents
+
+	install -m 644 bin/Ildaeil-FX.lv2/*    $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2/
+	install -m 644 bin/Ildaeil-MIDI.lv2/*  $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2/
+	install -m 644 bin/Ildaeil-Synth.lv2/* $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-Synth.lv2/
+
+	install -m 644 bin/Ildaeil-FX.vst/*    $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-FX.vst/
+	install -m 644 bin/Ildaeil-MIDI.vst/*  $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-MIDI.vst/
+	install -m 644 bin/Ildaeil-Synth.vst/* $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-Synth.vst/
+
+	cp -rL bin/Ildaeil-FX.vst3/Contents/*-*    $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/Contents/
+	cp -rL bin/Ildaeil-MIDI.vst3/Contents/*-*  $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-MIDI.vst3/Contents/
+	cp -rL bin/Ildaeil-Synth.vst3/Contents/*-* $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/Contents/
+
+# --------------------------------------------------------------
+
 clean:
 	$(MAKE) distclean -C carla
 	$(MAKE) clean -C dpf/dgl
