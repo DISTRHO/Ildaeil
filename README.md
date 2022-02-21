@@ -1,7 +1,7 @@
 # DISTRHO Ildaeil
 
 DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.  
-The idea is to load it as a plugin inside your DAW and then other the "real" plugin inside Ildaeil.  
+The idea is to load it as a plugin inside your DAW and then the other "real" plugin inside Ildaeil.  
 This allows, for example, a VST3 host to load LV2 plugins.
 
 The Ildaeil name comes from the korean 일대일, which means "one to one".
