@@ -14,9 +14,9 @@ Also, **only LV2 hosting is enabled at the moment**.
 
 When open, Ildaeil will show a list of plugins to pick from or the plugin editor if one is already selected.
 
-If the plugin provides an embedable UI, Ildaeil show will that by default, otherwise it shows a generic parameter list.  
+If the plugin provides an embeddable UI, Ildaeil show will that by default, otherwise it shows a generic parameter list.  
 Toggling between generic vs custom/embed view is possible.  
-In the case of a plugin providing a custom UI that is not embedable, Ildaeil will show the generic view by default.  
+In the case of a plugin providing a custom UI that is not embeddable, Ildaeil will show the generic view by default.  
 You can press "Show Custom GUI" to open the plugin UI in an external window.
 
 ## Features
