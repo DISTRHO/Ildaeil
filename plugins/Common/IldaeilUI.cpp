@@ -43,6 +43,8 @@ namespace ildaeil {
 }
 #endif
 
+#define WASM_TESTING
+
 START_NAMESPACE_DISTRHO
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -255,7 +257,7 @@ public:
 
         fPlugin->fUI = this;
 
-        /* TESTING
+#ifdef WASM_TESTING
         if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
                              "midifile", 0, 0x0, PLUGIN_OPTIONS_NULL))
         {
@@ -263,9 +265,17 @@ public:
             carla_set_custom_data(handle, 0, CUSTOM_DATA_TYPE_PATH, "file", "/furelise.mid");
             carla_set_parameter_value(handle, 0, 0, 1.0f);
             carla_set_parameter_value(handle, 0, 1, 0.0f);
-            fPluginId = 1;
+            fPluginId = 2;
         }
-        */
+        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "miditranspose", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "3bandeq", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "pingpongpan", 0, 0x0, PLUGIN_OPTIONS_NULL);
+            carla_set_parameter_value(handle, 4, 1, 0.0f);
+        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "audiogain_s", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        for (uint i=0; i<5; ++i)
+            carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
+#endif
     }
 
     ~IldaeilUI() override
@@ -492,7 +502,7 @@ public:
 
     void loadPlugin(const CarlaHostHandle handle, const char* const label)
     {
-        if (fPluginRunning)
+        if (fPluginRunning || fPluginId != 0)
         {
             hidePluginUI(handle);
             carla_replace_plugin(handle, fPluginId);
@@ -509,7 +519,7 @@ public:
             fPluginGenericUI = nullptr;
             showPluginUI(handle, false);
 
-            /* TESTING
+#ifdef WASM_TESTING
             d_stdout("loaded a plugin with label '%s'", label);
 
             if (std::strcmp(label, "audiofile") == 0)
@@ -519,7 +529,7 @@ public:
                 carla_set_parameter_value(handle, fPluginId, 1, 0.0f);
                 fPluginGenericUI->values[1] = 0.0f;
             }
-            */
+#endif
         }
         else
         {
@@ -732,35 +742,50 @@ protected:
 
             if (! info->valid)
                 break;
-
             if (info->cvIns != 0 || info->cvOuts != 0)
                 break;
 
-            #if DISTRHO_PLUGIN_IS_SYNTH
+           #ifdef WASM_TESTING
+            if (info->midiIns != 0 && info->midiIns != 1)
+                break;
+            if (info->midiOuts != 0 && info->midiOuts != 1)
+                break;
+            if (info->audioIns > 2 || info->audioOuts > 2)
+                break;
+            if (fPluginType == PLUGIN_INTERNAL)
+            {
+                if (std::strcmp(info->label, "audiogain") == 0)
+                    break;
+                if (std::strcmp(info->label, "midichanfilter") == 0)
+                    break;
+                if (std::strcmp(info->label, "midichannelize") == 0)
+                    break;
+            }
+           #elif DISTRHO_PLUGIN_IS_SYNTH
             if (info->midiIns != 1 && info->audioIns != 0)
                 break;
             if ((info->hints & PLUGIN_IS_SYNTH) == 0x0 && info->audioIns != 0)
                 break;
             if (info->audioOuts != 1 && info->audioOuts != 2)
                 break;
-            #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+           #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
             if ((info->midiIns != 1 && info->audioIns != 0 && info->audioOuts != 0) || info->midiOuts != 1)
                 break;
             if (info->audioIns != 0 || info->audioOuts != 0)
                 break;
-            #else
+           #else
             if (info->audioIns != 1 && info->audioIns != 2)
                 break;
             if (info->audioOuts != 1 && info->audioOuts != 2)
                 break;
-            #endif
+           #endif
 
             if (fPluginType == PLUGIN_INTERNAL)
             {
+               #ifndef WASM_TESTING
                 if (std::strcmp(info->label, "audiogain_s") == 0)
                     break;
-                if (std::strcmp(info->label, "cv2audio") == 0)
-                    break;
+               #endif
                 if (std::strcmp(info->label, "lfo") == 0)
                     break;
                 if (std::strcmp(info->label, "midi2cv") == 0)
@@ -886,12 +911,32 @@ protected:
             if (ImGui::Button("Reset"))
                 fIdleState = kIdleResetPlugin;
 
-            if (fDrawingState == kDrawingPluginGenericUI && fPluginHasCustomUI)
+            if (fDrawingState == kDrawingPluginGenericUI)
             {
-                ImGui::SameLine();
+                if (fPluginHasCustomUI)
+                {
+                    ImGui::SameLine();
 
-                if (ImGui::Button("Show Custom GUI"))
-                    fIdleState = kIdleShowCustomUI;
+                    if (ImGui::Button("Show Custom GUI"))
+                        fIdleState = kIdleShowCustomUI;
+                }
+
+#ifdef WASM_TESTING
+                ImGui::SameLine();
+                ImGui::TextUnformatted("    Plugin to control:");
+                for (uint i=1; i<10; ++i)
+                {
+                    char txt[8];
+                    sprintf(txt, "%d", i);
+                    ImGui::SameLine();
+                    if (ImGui::Button(txt))
+                    {
+                        fPluginId = i;
+                        fPluginGenericUI = nullptr;
+                        fIdleState = kIdleHideEmbedAndShowGenericUI;
+                    }
+                }
+#endif
             }
 
             if (fDrawingState == kDrawingPluginEmbedUI)
