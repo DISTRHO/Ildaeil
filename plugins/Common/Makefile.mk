@@ -59,7 +59,7 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
 
-ifeq ($(WASM),true)
+ifneq ($(WASM),true)
 BUILD_CXX_FLAGS += -pthread
 endif
 
