@@ -20,6 +20,7 @@
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
 # import <Cocoa/Cocoa.h>
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
@@ -36,6 +37,7 @@ START_NAMESPACE_DGL
 
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
 static pthread_mutex_t gErrorMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -57,6 +59,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
     NSView* view;
     NSView* subview;
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
     ::HWND pluginWindow;
 #else
@@ -75,6 +78,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
           view(nullptr),
           subview(nullptr),
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
           pluginWindow(nullptr),
 #else
@@ -93,6 +97,7 @@ struct PluginHostWindow::PrivateData
         [view setAutoresizesSubviews:NO];
         [view setHidden:YES];
         [(NSView*)parentWindowId addSubview:view];
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
         display = XOpenDisplay(nullptr);
@@ -106,6 +111,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
         if (view != nullptr)
             [view release];
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
         if (display != nullptr)
@@ -121,6 +127,8 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_MAC)
         subview = nullptr;
         return view;
+#elif defined(DISTRHO_OS_WASM)
+        return nullptr;
 #elif defined(DISTRHO_OS_WINDOWS)
         pluginWindow = nullptr;
         return (void*)parentWindowId;
@@ -137,6 +145,7 @@ struct PluginHostWindow::PrivateData
         if (view != nullptr)
             [view setHidden:YES];
         [NSOpenGLContext clearCurrentContext];
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
@@ -168,6 +177,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
                 pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
+#elif defined(DISTRHO_OS_WASM)
 #else
             if (display == nullptr)
                 return;
@@ -210,6 +220,7 @@ struct PluginHostWindow::PrivateData
                 pluginWindowCallbacks->pluginWindowResized(width * scaleFactor, height * scaleFactor);
             }
         }
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
@@ -301,6 +312,7 @@ struct PluginHostWindow::PrivateData
             const double scaleFactor = [[[view window] screen] backingScaleFactor];
             [view setFrame:NSMakeRect(x / scaleFactor, y / scaleFactor, width / scaleFactor, height / scaleFactor)];
         }
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
         // unused
         (void)width;

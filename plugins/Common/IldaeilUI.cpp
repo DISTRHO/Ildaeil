@@ -295,9 +295,9 @@ public:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fPluginType == PLUGIN_INTERNAL || fPluginType == PLUGIN_LV2, nullptr);
 
-        Window::FileBrowserOptions opts;
+        FileBrowserOptions opts;
         opts.title = title;
-        getWindow().openFileBrowser(opts);
+        openFileBrowser(opts);
         return nullptr;
     }
 

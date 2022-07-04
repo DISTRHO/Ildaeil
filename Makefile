@@ -21,13 +21,15 @@ DESTDIR ?=
 # Carla config
 
 CARLA_EXTRA_ARGS = CARLA_BACKEND_NAMESPACE=Ildaeil \
+	CAN_GENERATE_LV2_TTL=false \
+	STATIC_PLUGIN_TARGET=true \
+	USING_CUSTOM_DPF=true \
+	CUSTOM_DPF_PATH=$(CURDIR)/dpf \
 	HAVE_FFMPEG=false \
 	HAVE_FLUIDSYNTH=false \
 	HAVE_PROJECTM=false \
 	HAVE_ZYN_DEPS=false \
-	HAVE_ZYN_UI_DEPS=false \
-	USING_JUCE=false \
-	USING_JUCE_GUI_EXTRA=false
+	HAVE_ZYN_UI_DEPS=false
 
 ifneq ($(DEBUG),true)
 CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
@@ -36,13 +38,16 @@ endif
 # --------------------------------------------------------------
 # Check for X11+OpenGL dependencies
 
-ifneq ($(HAIKU_OR_MACOS_OR_WINDOWS),true)
+ifneq ($(HAIKU_OR_MACOS_OR_WASM_OR_WINDOWS),true)
 
 ifneq ($(HAVE_OPENGL),true)
 $(error OpenGL dependency not installed/available)
 endif
 ifneq ($(HAVE_X11),true)
 $(error X11 dependency not installed/available)
+endif
+ifneq ($(HAVE_XCURSOR),true)
+$(warning Xcursor dependency not installed/available)
 endif
 ifneq ($(HAVE_XEXT),true)
 $(warning Xext dependency not installed/available)
@@ -56,9 +61,7 @@ endif
 # --------------------------------------------------------------
 
 carla:
-	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS) \
-		CAN_GENERATE_LV2_TTL=false \
-		STATIC_PLUGIN_TARGET=true
+	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
