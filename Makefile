@@ -23,8 +23,6 @@ DESTDIR ?=
 CARLA_EXTRA_ARGS = CARLA_BACKEND_NAMESPACE=Ildaeil \
 	CAN_GENERATE_LV2_TTL=false \
 	STATIC_PLUGIN_TARGET=true \
-	USING_CUSTOM_DPF=true \
-	CUSTOM_DPF_PATH=$(CURDIR)/dpf \
 	HAVE_FFMPEG=false \
 	HAVE_FLUIDSYNTH=false \
 	HAVE_PROJECTM=false \
@@ -60,8 +58,8 @@ endif
 
 # --------------------------------------------------------------
 
-carla:
-	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
+carla: dgl
+	$(MAKE) bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl

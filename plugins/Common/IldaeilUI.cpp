@@ -20,7 +20,7 @@
 
 #include "CarlaBackendUtils.hpp"
 #include "PluginHostWindow.hpp"
-#include "extra/Thread.hpp"
+#include "extra/Runner.hpp"
 
 // IDE helper
 #include "DearImGui.hpp"
@@ -50,11 +50,15 @@ START_NAMESPACE_DISTRHO
 using namespace CARLA_BACKEND_NAMESPACE;
 
 class IldaeilUI : public UI,
-                  public Thread,
+                  public Runner,
                   public PluginHostWindow::Callbacks
 {
     static constexpr const uint kInitialWidth  = 520;
+   #ifdef DISTRHO_OS_WASM
+    static constexpr const uint kInitialHeight = 350;
+   #else
     static constexpr const uint kInitialHeight = 520;
+   #endif
     static constexpr const uint kGenericWidth  = 380;
     static constexpr const uint kGenericHeight = 400;
     static constexpr const uint kButtonHeight  = 20;
@@ -144,6 +148,7 @@ class IldaeilUI : public UI,
     PluginType fPluginType;
     PluginType fNextPluginType;
     uint fPluginCount;
+    uint fPluginId;
     int fPluginSelected;
     bool fPluginScanningFinished;
     bool fPluginHasCustomUI;
@@ -159,20 +164,42 @@ class IldaeilUI : public UI,
     char fPluginSearchString[0xff];
 
     String fPopupError;
-
     Size<uint> fNextSize;
+
+    struct RunnerData {
+        bool needsReinit;
+        uint pluginCount;
+        uint pluginIndex;
+
+        RunnerData()
+          : needsReinit(true),
+            pluginCount(0),
+            pluginIndex(0) {}
+        
+        void init()
+        {
+            needsReinit = true;
+            pluginCount = 0;
+            pluginIndex = 0;
+        }
+    } fRunnerData;
 
 public:
     IldaeilUI()
         : UI(kInitialWidth, kInitialHeight),
-          Thread("IldaeilScanner"),
+          Runner("IldaeilScanner"),
           fDrawingState(kDrawingLoading),
           fIdleState(kIdleInit),
           fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
           fPluginHostWindow(getWindow(), this),
+         #ifdef DISTRHO_OS_WASM
+          fPluginType(PLUGIN_INTERNAL),
+         #else
           fPluginType(PLUGIN_LV2),
+         #endif
           fNextPluginType(fPluginType),
           fPluginCount(0),
+          fPluginId(0),
           fPluginSelected(-1),
           fPluginScanningFinished(false),
           fPluginHasCustomUI(false),
@@ -182,7 +209,8 @@ public:
           fPluginWillRunInBridgeMode(false),
           fPlugins(nullptr),
           fPluginSearchActive(false),
-          fPluginSearchFirstShow(false)
+          fPluginSearchFirstShow(false),
+          fRunnerData()
     {
         const double scaleFactor = getScaleFactor();
 
@@ -226,6 +254,18 @@ public:
             fIdleState = kIdleInitPluginAlreadyLoaded;
 
         fPlugin->fUI = this;
+
+        /* TESTING
+        if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
+                             "midifile", 0, 0x0, PLUGIN_OPTIONS_NULL))
+        {
+            d_stdout("Special hack for MIDI file playback activated");
+            carla_set_custom_data(handle, 0, CUSTOM_DATA_TYPE_PATH, "file", "/furelise.mid");
+            carla_set_parameter_value(handle, 0, 0, 1.0f);
+            carla_set_parameter_value(handle, 0, 1, 0.0f);
+            fPluginId = 1;
+        }
+        */
     }
 
     ~IldaeilUI() override
@@ -240,9 +280,7 @@ public:
             carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_FRONTEND_WIN_ID, 0, "0");
         }
 
-        if (isThreadRunning())
-            stopThread(-1);
-
+        stopRunner();
         fPluginGenericUI = nullptr;
 
         delete[] fPlugins;
@@ -254,9 +292,12 @@ public:
 
         if (carla_get_current_plugin_count(handle) != 0)
         {
-            const uint hints = carla_get_plugin_info(handle, 0)->hints;
+           #ifndef DISTRHO_OS_WASM
+            // FIXME
+            const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
             fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
             fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
+           #endif
             fPluginRunning = true;
             return true;
         }
@@ -303,8 +344,10 @@ public:
 
     void showPluginUI(const CarlaHostHandle handle, const bool showIfNotEmbed)
     {
-        const CarlaPluginInfo* const info = carla_get_plugin_info(handle, 0);
+       #ifndef DISTRHO_OS_WASM
+        const CarlaPluginInfo* const info = carla_get_plugin_info(handle, fPluginId);
 
+        // FIXME
         if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
             fDrawingState = kDrawingPluginEmbedUI;
@@ -312,16 +355,17 @@ public:
             fPluginHasCustomUI = true;
             fPluginHasEmbedUI = true;
 
-            carla_embed_custom_ui(handle, 0, fPluginHostWindow.attachAndGetWindowHandle());
+            carla_embed_custom_ui(handle, fPluginId, fPluginHostWindow.attachAndGetWindowHandle());
         }
         else
+       #endif
         {
             createOrUpdatePluginGenericUI(handle);
 
             if (showIfNotEmbed && fPluginHasCustomUI)
             {
                 fIdleState = kIdleGiveIdleToUI;
-                carla_show_custom_ui(handle, 0, true);
+                carla_show_custom_ui(handle, fPluginId, true);
             }
         }
 
@@ -333,26 +377,31 @@ public:
         DISTRHO_SAFE_ASSERT_RETURN(fPluginRunning,);
 
         fPluginHostWindow.hide();
-        carla_show_custom_ui(handle, 0, false);
+        carla_show_custom_ui(handle, fPluginId, false);
     }
 
     void createOrUpdatePluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* info = nullptr)
     {
         if (info == nullptr)
-            info = carla_get_plugin_info(handle, 0);
+            info = carla_get_plugin_info(handle, fPluginId);
 
         fDrawingState = kDrawingPluginGenericUI;
+       #ifndef DISTRHO_OS_WASM
+        // FIXME
         fPluginHasCustomUI = info->hints & PLUGIN_HAS_CUSTOM_UI;
         fPluginHasEmbedUI = info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
+       #endif
 
         if (fPluginGenericUI == nullptr)
             createPluginGenericUI(handle, info);
         else
             updatePluginGenericUI(handle);
 
+       #ifndef DISTRHO_OS_WASM
         ImGuiStyle& style(ImGui::GetStyle());
         const double scaleFactor = getScaleFactor();
         fNextSize = Size<uint>(kGenericWidth * scaleFactor, (kGenericHeight + style.FramePadding.x) * scaleFactor);
+       #endif
     }
 
     void createPluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* const info)
@@ -364,12 +413,12 @@ public:
         title += info->maker;
         ui->title = title.getAndReleaseBuffer();
 
-        const uint32_t pcount = ui->parameterCount = carla_get_parameter_count(handle, 0);
+        const uint32_t pcount = ui->parameterCount = carla_get_parameter_count(handle, fPluginId);
 
         // make count of valid parameters
         for (uint32_t i=0; i < pcount; ++i)
         {
-            const ParameterData* const pdata = carla_get_parameter_data(handle, 0, i);
+            const ParameterData* const pdata = carla_get_parameter_data(handle, fPluginId, i);
 
             if ((pdata->hints & PARAMETER_IS_ENABLED) == 0x0)
             {
@@ -387,13 +436,13 @@ public:
         // now safely fill in details
         for (uint32_t i=0, j=0; i < pcount; ++i)
         {
-            const ParameterData* const pdata = carla_get_parameter_data(handle, 0, i);
+            const ParameterData* const pdata = carla_get_parameter_data(handle, fPluginId, i);
 
             if ((pdata->hints & PARAMETER_IS_ENABLED) == 0x0)
                 continue;
 
-            const CarlaParameterInfo* const pinfo = carla_get_parameter_info(handle, 0, i);
-            const ::ParameterRanges* const pranges = carla_get_parameter_ranges(handle, 0, i);
+            const CarlaParameterInfo* const pinfo = carla_get_parameter_info(handle, fPluginId, i);
+            const ::ParameterRanges* const pranges = carla_get_parameter_ranges(handle, fPluginId, i);
 
             String printformat;
 
@@ -414,7 +463,7 @@ public:
             param.min = pranges->min;
             param.max = pranges->max;
 
-            ui->values[j] = carla_get_current_parameter_value(handle, 0, i);
+            ui->values[j] = carla_get_current_parameter_value(handle, fPluginId, i);
 
             if (param.boolean)
                 param.bvalue = ui->values[j] > param.min;
@@ -434,7 +483,7 @@ public:
 
         for (uint32_t i=0; i < ui->parameterCount; ++i)
         {
-            ui->values[i] = carla_get_current_parameter_value(handle, 0, ui->parameters[i].rindex);
+            ui->values[i] = carla_get_current_parameter_value(handle, fPluginId, ui->parameters[i].rindex);
 
             if (ui->parameters[i].boolean)
                 ui->parameters[i].bvalue = ui->values[i] > ui->parameters[i].min;
@@ -446,7 +495,7 @@ public:
         if (fPluginRunning)
         {
             hidePluginUI(handle);
-            carla_replace_plugin(handle, 0);
+            carla_replace_plugin(handle, fPluginId);
         }
 
         carla_set_engine_option(handle, ENGINE_OPTION_PREFER_PLUGIN_BRIDGES, fPluginWillRunInBridgeMode, nullptr);
@@ -459,6 +508,18 @@ public:
             fPluginRunning = true;
             fPluginGenericUI = nullptr;
             showPluginUI(handle, false);
+
+            /* TESTING
+            d_stdout("loaded a plugin with label '%s'", label);
+
+            if (std::strcmp(label, "audiofile") == 0)
+            {
+                d_stdout("Loading mp3 file into audiofile plugin");
+                carla_set_custom_data(handle, fPluginId, CUSTOM_DATA_TYPE_PATH, "file", "/foolme.mp3");
+                carla_set_parameter_value(handle, fPluginId, 1, 0.0f);
+                fPluginGenericUI->values[1] = 0.0f;
+            }
+            */
         }
         else
         {
@@ -501,13 +562,13 @@ protected:
         {
         case kIdleInit:
             fIdleState = kIdleNothing;
-            startThread();
+            startRunner();
             break;
 
         case kIdleInitPluginAlreadyLoaded:
             fIdleState = kIdleNothing;
             showPluginUI(handle, false);
-            startThread();
+            startRunner();
             break;
 
         case kIdlePluginLoadedFromDSP:
@@ -522,7 +583,7 @@ protected:
 
         case kIdleResetPlugin:
             fIdleState = kIdleNothing;
-            loadPlugin(handle, carla_get_plugin_info(handle, 0)->label);
+            loadPlugin(handle, carla_get_plugin_info(handle, fPluginId)->label);
             break;
 
         case kIdleShowCustomUI:
@@ -538,7 +599,7 @@ protected:
 
         case kIdleHidePluginUI:
             fIdleState = kIdleNothing;
-            carla_show_custom_ui(handle, 0, false);
+            carla_show_custom_ui(handle, fPluginId, false);
             break;
 
         case kIdleGiveIdleToUI:
@@ -551,10 +612,9 @@ protected:
             if (fPluginRunning)
                 hidePluginUI(handle);
             fPluginSelected = -1;
-            if (isThreadRunning())
-                stopThread(-1);
+            stopRunner();
             fPluginType = fNextPluginType;
-            startThread();
+            startRunner();
             break;
 
         case kIdleNothing:
@@ -597,109 +657,133 @@ protected:
     void uiFileBrowserSelected(const char* const filename) override
     {
         if (fPlugin != nullptr && fPlugin->fCarlaHostHandle != nullptr && filename != nullptr)
-            carla_set_custom_data(fPlugin->fCarlaHostHandle, 0, CUSTOM_DATA_TYPE_STRING, "file", filename);
+            carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_STRING, "file", filename);
     }
 
-    void run() override
+    bool startRunner()
     {
-        const char* path;
-        switch (fPluginType)
+        if (isRunnerActive())
+            stopRunner();
+
+        fRunnerData.needsReinit = true;
+        return Runner::startRunner();
+    }
+
+    bool run() override
+    {
+        if (fRunnerData.needsReinit)
         {
-        case PLUGIN_LV2:
-            path = std::getenv("LV2_PATH");
-            break;
-        default:
-            path = nullptr;
-            break;
-        }
+            fRunnerData.needsReinit = false;
 
-        if (path != nullptr)
-            carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
+            const char* path;
+            switch (fPluginType)
+            {
+            case PLUGIN_LV2:
+                path = std::getenv("LV2_PATH");
+                break;
+            default:
+                path = nullptr;
+                break;
+            }
 
-        fPluginCount = 0;
-        delete[] fPlugins;
+            if (path != nullptr)
+                carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
 
-        uint count;
+            fPluginCount = 0;
+            delete[] fPlugins;
 
-        {
-            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
-
-            d_stdout("Will scan plugins now...");
-            count = carla_get_cached_plugin_count(fPluginType, path);
-            d_stdout("Scanning found %u plugins", count);
-        }
-
-        if (fDrawingState == kDrawingLoading)
-        {
-            fDrawingState = kDrawingPluginList;
-            fPluginSearchFirstShow = true;
-        }
-
-        if (count != 0)
-        {
-            fPlugins = new PluginInfoCache[count];
-
-            for (uint i=0, j; i < count && ! shouldThreadExit(); ++i)
             {
                 const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
 
-                const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(fPluginType, i);
-                DISTRHO_SAFE_ASSERT_CONTINUE(info != nullptr);
+                d_stdout("Will scan plugins now...");
+                fRunnerData.pluginCount = carla_get_cached_plugin_count(fPluginType, path);
+                d_stdout("Scanning found %u plugins", fRunnerData.pluginCount);
+            }
 
-                if (! info->valid)
-                    continue;
+            if (fDrawingState == kDrawingLoading)
+            {
+                fDrawingState = kDrawingPluginList;
+                fPluginSearchFirstShow = true;
+            }
 
-                if (info->cvIns != 0 || info->cvOuts != 0)
-                    continue;
-
-                #if DISTRHO_PLUGIN_IS_SYNTH
-                if (info->midiIns != 1 && info->audioIns != 0)
-                    continue;
-                if ((info->hints & PLUGIN_IS_SYNTH) == 0x0 && info->audioIns != 0)
-                    continue;
-                if (info->audioOuts != 1 && info->audioOuts != 2)
-                    continue;
-                #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-                if ((info->midiIns != 1 && info->audioIns != 0 && info->audioOuts != 0) || info->midiOuts != 1)
-                    continue;
-                if (info->audioIns != 0 || info->audioOuts != 0)
-                    continue;
-                #else
-                if (info->audioIns != 1 && info->audioIns != 2)
-                    continue;
-                if (info->audioOuts != 1 && info->audioOuts != 2)
-                    continue;
-                #endif
-
-                if (fPluginType == PLUGIN_INTERNAL)
-                {
-                    if (std::strcmp(info->label, "audiogain_s") == 0)
-                        continue;
-                    if (std::strcmp(info->label, "cv2audio") == 0)
-                        continue;
-                    if (std::strcmp(info->label, "lfo") == 0)
-                        continue;
-                    if (std::strcmp(info->label, "midi2cv") == 0)
-                        continue;
-                    if (std::strcmp(info->label, "midithrough") == 0)
-                        continue;
-                    if (std::strcmp(info->label, "3bandsplitter") == 0)
-                        continue;
-                }
-
-                j = fPluginCount;
-                fPlugins[j].name = strdup(info->name);
-                fPlugins[j].label = strdup(info->label);
-                ++fPluginCount;
+            if (fRunnerData.pluginCount != 0)
+            {
+                fPlugins = new PluginInfoCache[fRunnerData.pluginCount];
+                fPluginScanningFinished = false;
+                return true;
+            }
+            else
+            {
+                fPlugins = nullptr;
+                fPluginScanningFinished = true;
+                return false;
             }
         }
-        else
-        {
-            fPlugins = nullptr;
-        }
 
-        if (! shouldThreadExit())
-            fPluginScanningFinished = true;
+        const uint index = fRunnerData.pluginIndex++;
+        DISTRHO_SAFE_ASSERT_UINT2_RETURN(index < fRunnerData.pluginCount,
+                                         index, fRunnerData.pluginCount, false);
+
+        do {
+            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+
+            const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(fPluginType, index);
+            DISTRHO_SAFE_ASSERT_RETURN(info != nullptr, true);
+
+            if (! info->valid)
+                break;
+
+            if (info->cvIns != 0 || info->cvOuts != 0)
+                break;
+
+            #if DISTRHO_PLUGIN_IS_SYNTH
+            if (info->midiIns != 1 && info->audioIns != 0)
+                break;
+            if ((info->hints & PLUGIN_IS_SYNTH) == 0x0 && info->audioIns != 0)
+                break;
+            if (info->audioOuts != 1 && info->audioOuts != 2)
+                break;
+            #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+            if ((info->midiIns != 1 && info->audioIns != 0 && info->audioOuts != 0) || info->midiOuts != 1)
+                break;
+            if (info->audioIns != 0 || info->audioOuts != 0)
+                break;
+            #else
+            if (info->audioIns != 1 && info->audioIns != 2)
+                break;
+            if (info->audioOuts != 1 && info->audioOuts != 2)
+                break;
+            #endif
+
+            if (fPluginType == PLUGIN_INTERNAL)
+            {
+                if (std::strcmp(info->label, "audiogain_s") == 0)
+                    break;
+                if (std::strcmp(info->label, "cv2audio") == 0)
+                    break;
+                if (std::strcmp(info->label, "lfo") == 0)
+                    break;
+                if (std::strcmp(info->label, "midi2cv") == 0)
+                    break;
+                if (std::strcmp(info->label, "midithrough") == 0)
+                    break;
+                if (std::strcmp(info->label, "3bandsplitter") == 0)
+                    break;
+            }
+
+            const uint pindex = fPluginCount;
+            fPlugins[pindex].name = strdup(info->name);
+            fPlugins[pindex].label = strdup(info->label);
+            ++fPluginCount;
+        } while (false);
+
+        // run again
+        if (fRunnerData.pluginIndex != fRunnerData.pluginCount)
+            return true;
+
+        // stop here
+        fPluginScanningFinished = true;
+        return false;
     }
 
     void onImGuiDisplay() override
@@ -791,8 +875,10 @@ protected:
                 fIdleState = kIdleHidePluginUI;
                 fDrawingState = kDrawingPluginList;
 
+               #ifndef DISTRHO_OS_WASM
                 const double scaleFactor = getScaleFactor();
                 fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
+               #endif
             }
 
             ImGui::SameLine();
@@ -871,12 +957,12 @@ protected:
                     {
                         if (ImGui::IsItemActivated())
                         {
-                            carla_set_parameter_touch(handle, 0, param.rindex, true);
+                            carla_set_parameter_touch(handle, fPluginId, param.rindex, true);
                             // editParameter(0, true);
                         }
 
                         ui->values[i] = ui->parameters[i].bvalue ? ui->parameters[i].max : ui->parameters[i].min;
-                        carla_set_parameter_value(handle, 0, param.rindex, ui->values[i]);
+                        carla_set_parameter_value(handle, fPluginId, param.rindex, ui->values[i]);
                         // setParameterValue(0, ui->values[i]);
                     }
                 }
@@ -889,18 +975,18 @@ protected:
                     {
                         if (ImGui::IsItemActivated())
                         {
-                            carla_set_parameter_touch(handle, 0, param.rindex, true);
+                            carla_set_parameter_touch(handle, fPluginId, param.rindex, true);
                             // editParameter(0, true);
                         }
 
-                        carla_set_parameter_value(handle, 0, param.rindex, ui->values[i]);
+                        carla_set_parameter_value(handle, fPluginId, param.rindex, ui->values[i]);
                         // setParameterValue(0, ui->values[i]);
                     }
                 }
 
                 if (ImGui::IsItemDeactivated())
                 {
-                    carla_set_parameter_touch(handle, 0, param.rindex, false);
+                    carla_set_parameter_touch(handle, fPluginId, param.rindex, false);
                     // editParameter(0, false);
                 }
             }

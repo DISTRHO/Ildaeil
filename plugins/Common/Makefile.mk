@@ -39,7 +39,10 @@ CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_engine_
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_plugin.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/native-plugins.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/audio_decoder.a
+ifneq ($(WASM),true)
+CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/dgl.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/jackbridge.min.a
+endif
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/lilv.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/rtmempool.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/sfzero.a
@@ -56,7 +59,13 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
 
+ifeq ($(WASM),true)
 BUILD_CXX_FLAGS += -pthread
+endif
+
+# used for testing
+# LINK_FLAGS += --preload-file=foolme.mp3 --preload-file=furelise.mid -sALLOW_MEMORY_GROWTH
+
 BUILD_CXX_FLAGS += -I../Common
 BUILD_CXX_FLAGS += -I../../dpf-widgets/generic
 BUILD_CXX_FLAGS += -I../../dpf-widgets/opengl
