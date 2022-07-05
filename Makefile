@@ -59,7 +59,7 @@ endif
 # --------------------------------------------------------------
 
 carla: dgl
-	$(MAKE) bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
+	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
