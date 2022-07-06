@@ -43,13 +43,13 @@ namespace ildaeil {
 }
 #endif
 
-#define WASM_TESTING
+// #define WASM_TESTING
 
 START_NAMESPACE_DISTRHO
 
-// --------------------------------------------------------------------------------------------------------------------
-
 using namespace CARLA_BACKEND_NAMESPACE;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 class IldaeilUI : public UI,
                   public Runner,
@@ -258,7 +258,7 @@ public:
         fPlugin->fUI = this;
 
 #ifdef WASM_TESTING
-        if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
+        if (carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr,
                              "midifile", 0, 0x0, PLUGIN_OPTIONS_NULL))
         {
             d_stdout("Special hack for MIDI file playback activated");
@@ -267,14 +267,14 @@ public:
             carla_set_parameter_value(handle, 0, 1, 0.0f);
             fPluginId = 2;
         }
-        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "miditranspose", 0, 0x0, PLUGIN_OPTIONS_NULL);
-        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
-        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "3bandeq", 0, 0x0, PLUGIN_OPTIONS_NULL);
-        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "pingpongpan", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "miditranspose", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "3bandeq", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "pingpongpan", 0, 0x0, PLUGIN_OPTIONS_NULL);
             carla_set_parameter_value(handle, 4, 1, 0.0f);
-        carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "audiogain_s", 0, 0x0, PLUGIN_OPTIONS_NULL);
+        carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "audiogain_s", 0, 0x0, PLUGIN_OPTIONS_NULL);
         for (uint i=0; i<5; ++i)
-            carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
+            carla_add_plugin(handle, BINARY_NATIVE, PLUGIN_INTERNAL, nullptr, nullptr, "bypass", 0, 0x0, PLUGIN_OPTIONS_NULL);
 #endif
     }
 
@@ -572,13 +572,13 @@ protected:
         {
         case kIdleInit:
             fIdleState = kIdleNothing;
-            startRunner();
+            initAndStartRunner();
             break;
 
         case kIdleInitPluginAlreadyLoaded:
             fIdleState = kIdleNothing;
             showPluginUI(handle, false);
-            startRunner();
+            initAndStartRunner();
             break;
 
         case kIdlePluginLoadedFromDSP:
@@ -624,7 +624,7 @@ protected:
             fPluginSelected = -1;
             stopRunner();
             fPluginType = fNextPluginType;
-            startRunner();
+            initAndStartRunner();
             break;
 
         case kIdleNothing:
@@ -644,7 +644,7 @@ protected:
         {
         case PLUGIN_INTERNAL:
         case PLUGIN_AU:
-        // case PLUGIN_JSFX:
+        case PLUGIN_JSFX:
         case PLUGIN_SFZ:
             label = info.label;
             break;
@@ -670,13 +670,13 @@ protected:
             carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_STRING, "file", filename);
     }
 
-    bool startRunner()
+    bool initAndStartRunner()
     {
         if (isRunnerActive())
             stopRunner();
 
-        fRunnerData.needsReinit = true;
-        return Runner::startRunner();
+        fRunnerData.init();
+        return startRunner();
     }
 
     bool run() override
@@ -691,13 +691,13 @@ protected:
             case PLUGIN_LV2:
                 path = std::getenv("LV2_PATH");
                 break;
+            case PLUGIN_JSFX:
+                path = fPlugin->getPathForJSFX();
+                break;
             default:
                 path = nullptr;
                 break;
             }
-
-            if (path != nullptr)
-                carla_set_engine_option(fPlugin->fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, fPluginType, path);
 
             fPluginCount = 0;
             delete[] fPlugins;
@@ -1055,6 +1055,7 @@ protected:
         static const char* pluginTypes[] = {
             getPluginTypeAsString(PLUGIN_INTERNAL),
             getPluginTypeAsString(PLUGIN_LV2),
+            getPluginTypeAsString(PLUGIN_JSFX),
         };
 
         setupMainWindowPos();
@@ -1100,6 +1101,9 @@ protected:
             int current;
             switch (fPluginType)
             {
+            case PLUGIN_JSFX:
+                current = 2;
+                break;
             case PLUGIN_LV2:
                 current = 1;
                 break;
@@ -1118,6 +1122,9 @@ protected:
                     break;
                 case 1:
                     fNextPluginType = PLUGIN_LV2;
+                    break;
+                case 2:
+                    fNextPluginType = PLUGIN_JSFX;
                     break;
                 }
             }
@@ -1155,7 +1162,7 @@ protected:
                     case PLUGIN_INTERNAL:
                     case PLUGIN_AU:
                     case PLUGIN_SFZ:
-                    // case PLUGIN_JSFX:
+                    case PLUGIN_JSFX:
                         ImGui::TableSetupColumn("Name");
                         ImGui::TableSetupColumn("Label");
                         ImGui::TableHeadersRow();
@@ -1182,7 +1189,7 @@ protected:
                         {
                         case PLUGIN_INTERNAL:
                         case PLUGIN_AU:
-                        // case PLUGIN_JSFX:
+                        case PLUGIN_JSFX:
                         case PLUGIN_SFZ:
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0);

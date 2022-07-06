@@ -18,14 +18,13 @@
 #include "IldaeilBasePlugin.hpp"
 
 #include "CarlaEngine.hpp"
+#include "water/files/File.h"
 #include "water/streams/MemoryOutputStream.h"
 #include "water/xml/XmlDocument.h"
 
 START_NAMESPACE_DISTRHO
 
-// --------------------------------------------------------------------------------------------------------------------
-
-Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
+using namespace CARLA_BACKEND_NAMESPACE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -44,7 +43,39 @@ static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpc
 
 // --------------------------------------------------------------------------------------------------------------------
 
-using namespace CARLA_BACKEND_NAMESPACE;
+Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+const char* IldaeilBasePlugin::getPathForJSFX()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_MAC)
+        path = water::File::getSpecialLocation(File::userHomeDirectory).getFullPathName()
+             + "/Library/Application Support/REAPER/Effects";
+       #elif defined(CARLA_OS_WASM)
+        path = "/jsfx";
+       #elif defined(CARLA_OS_WIN)
+        path = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\REAPER\\Effects";
+        if (! system::exists(path))
+            path = water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName()
+                 + "\\REAPER\\InstallData\\Effects";
+       #else
+        if (const char* const configHome = std::getenv("XDG_CONFIG_HOME"))
+            path = configHome;
+        else
+            path = water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName() + "/.config";
+        path += "/REAPER/Effects";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 class IldaeilPlugin : public IldaeilBasePlugin
 {
@@ -118,6 +149,8 @@ public:
 
         if (const char* const path = std::getenv("LV2_PATH"))
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LV2, path);
+
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_JSFX, getPathForJSFX());
 
         fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_HOST_USES_EMBED,
                                            0, 0, nullptr, 0.0f);

@@ -32,6 +32,7 @@ class IldaeilBasePlugin : public Plugin
 {
 public:
     static Mutex sPluginInfoLoadMutex;
+    static const char* getPathForJSFX();
 
     const NativePluginDescriptor* fCarlaPluginDescriptor;
     NativePluginHandle fCarlaPluginHandle;
