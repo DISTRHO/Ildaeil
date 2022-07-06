@@ -60,7 +60,7 @@ const char* IldaeilBasePlugin::getPathForJSFX()
         path = "/jsfx";
        #elif defined(CARLA_OS_WIN)
         path = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\REAPER\\Effects";
-        if (! system::exists(path))
+        if (! water::File(path).isDirectory())
             path = water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName()
                  + "\\REAPER\\InstallData\\Effects";
        #else
