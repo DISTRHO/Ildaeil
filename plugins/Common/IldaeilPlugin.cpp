@@ -533,6 +533,7 @@ static void host_ui_custom_data_changed(NativeHostHandle handle, const char* key
 static void host_ui_closed(NativeHostHandle handle)
 {
     d_stdout("%s %p", __FUNCTION__, handle);
+    ildaeilCloseUI(static_cast<IldaeilPlugin*>(handle));
 }
 
 static const char* host_ui_open_file(const NativeHostHandle handle, const bool isDir, const char* const title, const char* const filter)

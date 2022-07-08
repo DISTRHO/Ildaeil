@@ -302,10 +302,10 @@ public:
 
         if (carla_get_current_plugin_count(handle) != 0)
         {
-           #ifndef DISTRHO_OS_WASM
             // FIXME
             const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
             fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
+           #ifndef DISTRHO_OS_WASM
             fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
            #endif
             fPluginRunning = true;
@@ -342,6 +342,12 @@ public:
         repaint();
     }
 
+    void closeUI()
+    {
+        if (fIdleState == kIdleGiveIdleToUI)
+            fIdleState = kIdleNothing;
+    }
+
     const char* openFileFromDSP(const bool /*isDir*/, const char* const title, const char* const /*filter*/)
     {
         DISTRHO_SAFE_ASSERT_RETURN(fPluginType == PLUGIN_INTERNAL || fPluginType == PLUGIN_LV2, nullptr);
@@ -354,10 +360,10 @@ public:
 
     void showPluginUI(const CarlaHostHandle handle, const bool showIfNotEmbed)
     {
+        // FIXME
        #ifndef DISTRHO_OS_WASM
         const CarlaPluginInfo* const info = carla_get_plugin_info(handle, fPluginId);
 
-        // FIXME
         if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
             fDrawingState = kDrawingPluginEmbedUI;
@@ -396,9 +402,9 @@ public:
             info = carla_get_plugin_info(handle, fPluginId);
 
         fDrawingState = kDrawingPluginGenericUI;
-       #ifndef DISTRHO_OS_WASM
         // FIXME
         fPluginHasCustomUI = info->hints & PLUGIN_HAS_CUSTOM_UI;
+       #ifndef DISTRHO_OS_WASM
         fPluginHasEmbedUI = info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
        #endif
 
@@ -613,7 +619,8 @@ protected:
             break;
 
         case kIdleGiveIdleToUI:
-            fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
+            if (fPlugin->fCarlaPluginDescriptor->ui_idle != nullptr)
+                fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
             fPluginHostWindow.idle();
             break;
 
@@ -745,7 +752,7 @@ protected:
             if (info->cvIns != 0 || info->cvOuts != 0)
                 break;
 
-           #ifdef WASM_TESTING
+           #ifdef DISTRHO_OS_WASM
             if (info->midiIns != 0 && info->midiIns != 1)
                 break;
             if (info->midiOuts != 0 && info->midiOuts != 1)
@@ -782,7 +789,7 @@ protected:
 
             if (fPluginType == PLUGIN_INTERNAL)
             {
-               #ifndef WASM_TESTING
+               #ifndef DISTRHO_OS_WASM
                 if (std::strcmp(info->label, "audiogain_s") == 0)
                     break;
                #endif
@@ -1263,10 +1270,19 @@ void ildaeilParameterChangeForUI(void* const ui, const uint32_t index, const flo
     static_cast<IldaeilUI*>(ui)->changeParameterFromDSP(index, value);
 }
 
+void ildaeilCloseUI(void* ui)
+{
+    DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+    d_stdout("%s %d", __PRETTY_FUNCTION__, __LINE__);
+    static_cast<IldaeilUI*>(ui)->closeUI();
+}
+
 const char* ildaeilOpenFileForUI(void* const ui, const bool isDir, const char* const title, const char* const filter)
 {
     DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr, nullptr);
 
+    d_stdout("%s %d", __PRETTY_FUNCTION__, __LINE__);
     return static_cast<IldaeilUI*>(ui)->openFileFromDSP(isDir, title, filter);
 }
 

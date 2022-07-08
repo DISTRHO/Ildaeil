@@ -57,6 +57,7 @@ public:
 
 void ildaeilProjectLoadedFromDSP(void* ui);
 void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
+void ildaeilCloseUI(void* ui);
 const char* ildaeilOpenFileForUI(void* ui, bool isDir, const char* title, const char* filter);
 
 // --------------------------------------------------------------------------------------------------------------------

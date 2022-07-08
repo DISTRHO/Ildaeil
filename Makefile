@@ -33,6 +33,12 @@ ifneq ($(DEBUG),true)
 CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
 endif
 
+CARLA_TARGETS = static-plugin
+
+ifneq ($(WASM),true)
+CARLA_TARGETS += bridges-plugin bridges-ui
+endif
+
 # --------------------------------------------------------------
 # Check for X11+OpenGL dependencies
 
@@ -59,7 +65,7 @@ endif
 # --------------------------------------------------------------
 
 carla: dgl
-	$(MAKE) bridges-plugin bridges-ui static-plugin -C carla $(CARLA_EXTRA_ARGS)
+	$(MAKE) -C carla $(CARLA_EXTRA_ARGS) $(CARLA_TARGETS)
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl

@@ -174,10 +174,10 @@ struct PluginHostWindow::PrivateData
                     break;
                 }
             }
+#elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
                 pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
-#elif defined(DISTRHO_OS_WASM)
 #else
             if (display == nullptr)
                 return;
