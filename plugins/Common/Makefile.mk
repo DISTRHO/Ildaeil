@@ -50,6 +50,11 @@ CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/water.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/ysfx.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/zita-resampler.a
 
+# FIXME
+# ifeq ($(WASM),true)
+# STATIC_CARLA_PLUGIN_LIBS = -lsndfile -lopus -lFLAC -lvorbisenc -lvorbis -logg -lm
+# endif
+
 EXTRA_DEPENDENCIES = $(CARLA_EXTRA_LIBS)
 EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 
@@ -59,12 +64,17 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
 
-ifneq ($(WASM),true)
+ifeq ($(WASM),true)
+# used for testing
+LINK_FLAGS += -sALLOW_MEMORY_GROWTH
+# LINK_FLAGS += --preload-file=foolme.mp3
+# LINK_FLAGS += --preload-file=furelise.mid
+# LINK_FLAGS += --preload-file=./jsfx
+# LINK_FLAGS += --preload-file=./lv2
+# LINK_FLAGS += --shell-file=../Cardinal/src/emscripten/shell.html
+else ifneq ($(HAIKU),true)
 BUILD_CXX_FLAGS += -pthread
 endif
-
-# used for testing
-# LINK_FLAGS += --preload-file=foolme.mp3 --preload-file=furelise.mid -sALLOW_MEMORY_GROWTH
 
 BUILD_CXX_FLAGS += -I../Common
 BUILD_CXX_FLAGS += -I../../dpf-widgets/generic
@@ -86,11 +96,16 @@ endif
 # --------------------------------------------------------------
 # Enable all possible plugin types
 
+ifneq ($(WASM),true)
 all: jack lv2 vst2 vst3 carlabins
+else
+all: jack
+endif
 
 # --------------------------------------------------------------
 # special step for carla binaries
 
+ifneq ($(WASM),true)
 CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-bridge-native$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk2$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
@@ -99,5 +114,8 @@ carlabins: lv2 vst2 vst3
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst3))
+else
+carlabins:
+endif
 
 # --------------------------------------------------------------

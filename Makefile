@@ -65,15 +65,17 @@ endif
 # --------------------------------------------------------------
 
 carla: dgl
-	$(MAKE) -C carla $(CARLA_EXTRA_ARGS) $(CARLA_TARGETS)
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
 
 plugins: carla dgl
-	$(MAKE) all -C plugins/FX
-	$(MAKE) all -C plugins/MIDI
-	$(MAKE) all -C plugins/Synth
+	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/FX
+ifneq ($(WASM),true)
+	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/Synth
+endif
 
 ifneq ($(CROSS_COMPILING),true)
 gen: plugins dpf/utils/lv2_ttl_generator

@@ -194,11 +194,7 @@ public:
           fIdleState(kIdleInit),
           fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
           fPluginHostWindow(getWindow(), this),
-         #ifdef DISTRHO_OS_WASM
-          fPluginType(PLUGIN_INTERNAL),
-         #else
           fPluginType(PLUGIN_LV2),
-         #endif
           fNextPluginType(fPluginType),
           fPluginCount(0),
           fPluginId(0),
