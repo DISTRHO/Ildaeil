@@ -1235,10 +1235,12 @@ protected:
     {
     }
 
-    void stateChanged(const char* const key, const char* const) override
+    void stateChanged(const char* /* const key */, const char*) override
     {
+        /*
         if (std::strcmp(key, "project") == 0)
             hidePluginUI(fPlugin->fCarlaHostHandle);
+        */
     }
 
     // -------------------------------------------------------------------------------------------------------

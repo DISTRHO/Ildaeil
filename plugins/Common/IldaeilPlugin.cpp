@@ -56,6 +56,8 @@ const char* IldaeilBasePlugin::getPathForJSFX()
        #if defined(CARLA_OS_MAC)
         path = water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName()
              + "/Library/Application Support/REAPER/Effects";
+        if (! water::File(path).isDirectory())
+            path = "/Applications/REAPER.app/Contents/InstallFiles/Effects";
        #elif defined(CARLA_OS_WASM)
         path = "/jsfx";
        #elif defined(CARLA_OS_WIN)
@@ -82,7 +84,6 @@ class IldaeilPlugin : public IldaeilBasePlugin
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
     static constexpr const uint kMaxMidiEventCount = 512;
     NativeMidiEvent* fMidiEvents;
-    uint32_t fMidiEventCount;
     float* fDummyBuffer;
     float* fDummyBuffers[2];
 #endif
@@ -96,7 +97,6 @@ public:
         : IldaeilBasePlugin(),
 #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
           fMidiEvents(nullptr),
-          fMidiEventCount(0),
           fDummyBuffer(nullptr),
 #endif
           fLastLatencyValue(0)
@@ -249,10 +249,6 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * Information */
 
-   /**
-      Get the plugin label.
-      A plugin label follows the same rules as Parameter::symbol, with the exception that it can start with numbers.
-    */
     const char* getLabel() const override
     {
 #if DISTRHO_PLUGIN_IS_SYNTH
@@ -264,51 +260,31 @@ protected:
 #endif
     }
 
-   /**
-      Get an extensive comment/description about the plugin.
-    */
     const char* getDescription() const override
     {
         return "Ildaeil is a mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.";
     }
 
-   /**
-      Get the plugin author/maker.
-    */
     const char* getMaker() const override
     {
         return "DISTRHO";
     }
 
-   /**
-      Get the plugin homepage.
-    */
     const char* getHomePage() const override
     {
         return "https://github.com/DISTRHO/Ildaeil";
     }
 
-   /**
-      Get the plugin license name (a single line of text).
-      For commercial plugins this should return some short copyright information.
-    */
     const char* getLicense() const override
     {
         return "GPLv2+";
     }
 
-   /**
-      Get the plugin version, in hexadecimal.
-    */
     uint32_t getVersion() const override
     {
-        return d_version(1, 0, 0);
+        return d_version(1, 1, 0);
     }
 
-   /**
-      Get the plugin unique Id.
-      This value is used by LADSPA, DSSI and VST plugin formats.
-    */
     int64_t getUniqueId() const override
     {
 #if DISTRHO_PLUGIN_IS_SYNTH
@@ -323,12 +299,19 @@ protected:
    /* --------------------------------------------------------------------------------------------------------
     * Init */
 
-    void initState(const uint32_t index, String& stateKey, String& defaultStateValue) override
+    void initAudioPort(bool input, uint32_t index, AudioPort& port) override
+    {
+        port.groupId = kPortGroupStereo;
+        Plugin::initAudioPort(input, index, port);
+    }
+
+    void initState(const uint32_t index, State& state) override
     {
         DISTRHO_SAFE_ASSERT_RETURN(index == 0,);
 
-        stateKey = "project";
-        defaultStateValue = ""
+        state.hints = kStateIsOnlyForDSP;
+        state.key = "project";
+        state.defaultValue = ""
         "<?xml version='1.0' encoding='UTF-8'?>\n"
         "<!DOCTYPE CARLA-PROJECT>\n"
         "<CARLA-PROJECT VERSION='" CARLA_VERSION_STRMIN "'>\n"
