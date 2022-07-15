@@ -136,6 +136,7 @@ class IldaeilUI : public UI,
         kIdleLoadSelectedPlugin,
         kIdlePluginLoadedFromDSP,
         kIdleResetPlugin,
+        kIdleOpenFileUI,
         kIdleShowCustomUI,
         kIdleHideEmbedAndShowGenericUI,
         kIdleHidePluginUI,
@@ -155,6 +156,7 @@ class IldaeilUI : public UI,
     bool fPluginScanningFinished;
     bool fPluginHasCustomUI;
     bool fPluginHasEmbedUI;
+    bool fPluginHasFileOpen;
     bool fPluginHasOutputParameters;
     bool fPluginRunning;
     bool fPluginWillRunInBridgeMode;
@@ -202,6 +204,7 @@ public:
           fPluginScanningFinished(false),
           fPluginHasCustomUI(false),
           fPluginHasEmbedUI(false),
+          fPluginHasFileOpen(false),
           fPluginHasOutputParameters(false),
           fPluginRunning(false),
           fPluginWillRunInBridgeMode(false),
@@ -296,19 +299,33 @@ public:
     {
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
 
-        if (carla_get_current_plugin_count(handle) != 0)
+        if (carla_get_current_plugin_count(handle) == 0)
+            return false;
+
+        const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
+        updatePluginFlags(hints);
+
+        fPluginRunning = true;
+        return true;
+    }
+
+    void updatePluginFlags(const uint hints) noexcept
+    {
+        if (hints & PLUGIN_HAS_CUSTOM_UI_USING_FILE_OPEN)
         {
-            // FIXME
-            const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
+            fPluginHasCustomUI = false;
+            fPluginHasEmbedUI = false;
+            fPluginHasFileOpen = true;
+        }
+        else
+        {
             fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
            #ifndef DISTRHO_OS_WASM
             fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
            #endif
-            fPluginRunning = true;
-            return true;
+            fPluginHasFileOpen = false;
         }
 
-        return false;
     }
 
     void projectLoadedFromDSP()
@@ -356,22 +373,23 @@ public:
 
     void showPluginUI(const CarlaHostHandle handle, const bool showIfNotEmbed)
     {
-        // FIXME
-       #ifndef DISTRHO_OS_WASM
-        const CarlaPluginInfo* const info = carla_get_plugin_info(handle, fPluginId);
+        const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
 
-        if (info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
+       #ifndef DISTRHO_OS_WASM
+        if (hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
             fDrawingState = kDrawingPluginEmbedUI;
             fIdleState = kIdleGiveIdleToUI;
             fPluginHasCustomUI = true;
             fPluginHasEmbedUI = true;
+            fPluginHasFileOpen = false;
 
             carla_embed_custom_ui(handle, fPluginId, fPluginHostWindow.attachAndGetWindowHandle());
         }
         else
        #endif
         {
+            // fPluginHas* flags are updated in the next function
             createOrUpdatePluginGenericUI(handle);
 
             if (showIfNotEmbed && fPluginHasCustomUI)
@@ -398,11 +416,7 @@ public:
             info = carla_get_plugin_info(handle, fPluginId);
 
         fDrawingState = kDrawingPluginGenericUI;
-        // FIXME
-        fPluginHasCustomUI = info->hints & PLUGIN_HAS_CUSTOM_UI;
-       #ifndef DISTRHO_OS_WASM
-        fPluginHasEmbedUI = info->hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
-       #endif
+        updatePluginFlags(info->hints);
 
         if (fPluginGenericUI == nullptr)
             createPluginGenericUI(handle, info);
@@ -596,6 +610,11 @@ protected:
         case kIdleResetPlugin:
             fIdleState = kIdleNothing;
             loadPlugin(handle, carla_get_plugin_info(handle, fPluginId)->label);
+            break;
+
+        case kIdleOpenFileUI:
+            fIdleState = kIdleNothing;
+            carla_show_custom_ui(handle, fPluginId, true);
             break;
 
         case kIdleShowCustomUI:
@@ -922,6 +941,14 @@ protected:
 
                     if (ImGui::Button("Show Custom GUI"))
                         fIdleState = kIdleShowCustomUI;
+                }
+
+                if (fPluginHasFileOpen)
+                {
+                    ImGui::SameLine();
+
+                    if (ImGui::Button("Open File..."))
+                        fIdleState = kIdleOpenFileUI;
                 }
 
 #ifdef WASM_TESTING
