@@ -1299,7 +1299,6 @@ void ildaeilCloseUI(void* ui)
 {
     DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
 
-    d_stdout("%s %d", __PRETTY_FUNCTION__, __LINE__);
     static_cast<IldaeilUI*>(ui)->closeUI();
 }
 
@@ -1307,7 +1306,6 @@ const char* ildaeilOpenFileForUI(void* const ui, const bool isDir, const char* c
 {
     DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr, nullptr);
 
-    d_stdout("%s %d", __PRETTY_FUNCTION__, __LINE__);
     return static_cast<IldaeilUI*>(ui)->openFileFromDSP(isDir, title, filter);
 }
 

@@ -51,9 +51,9 @@ CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/ysfx.a
 CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/zita-resampler.a
 
 # FIXME
-# ifeq ($(WASM),true)
-# STATIC_CARLA_PLUGIN_LIBS = -lsndfile -lopus -lFLAC -lvorbisenc -lvorbis -logg -lm
-# endif
+ifeq ($(WASM),true)
+STATIC_CARLA_PLUGIN_LIBS = -lsndfile -lopus -lFLAC -lvorbisenc -lvorbis -logg -lm
+endif
 
 EXTRA_DEPENDENCIES = $(CARLA_EXTRA_LIBS)
 EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
@@ -70,7 +70,7 @@ LINK_FLAGS += -sALLOW_MEMORY_GROWTH
 # LINK_FLAGS += --preload-file=foolme.mp3
 # LINK_FLAGS += --preload-file=furelise.mid
 # LINK_FLAGS += --preload-file=./jsfx
-# LINK_FLAGS += --preload-file=./lv2
+LINK_FLAGS += --preload-file=./lv2
 # LINK_FLAGS += --shell-file=../Cardinal/src/emscripten/shell.html
 else ifneq ($(HAIKU),true)
 BUILD_CXX_FLAGS += -pthread
