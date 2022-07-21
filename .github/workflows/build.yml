@@ -243,7 +243,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable:i386
+          sudo apt-get install -y binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine32:i386 wine-stable:i386
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -284,7 +284,7 @@ jobs:
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine-stable
+          sudo apt-get install -y binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine32:i386 wine64 wine-stable
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
