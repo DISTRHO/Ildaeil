@@ -182,7 +182,7 @@ jobs:
             bin/*
 
   macos-universal:
-    runs-on: macos-10.15
+    runs-on: macos-11
     steps:
       - uses: actions/checkout@v2
         with:
@@ -193,10 +193,6 @@ jobs:
           path: |
             ~/PawPawBuilds
           key: macos-universal-v${{ env.CACHE_VERSION }}
-      - name: Fix up Xcode
-        run: |
-          sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
-          sudo xcode-select -s "/Applications/Xcode_12.3.app"
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
