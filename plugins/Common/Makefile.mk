@@ -67,6 +67,7 @@ include ../../dpf/Makefile.plugins.mk
 ifeq ($(WASM),true)
 # used for testing
 LINK_FLAGS += -sALLOW_MEMORY_GROWTH
+LINK_FLAGS += --use-preload-plugins
 # LINK_FLAGS += --preload-file=foolme.mp3
 # LINK_FLAGS += --preload-file=furelise.mid
 # LINK_FLAGS += --preload-file=./jsfx
