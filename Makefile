@@ -44,6 +44,15 @@ CARLA_TARGETS += bridges-plugin bridges-ui
 endif
 
 # --------------------------------------------------------------
+# DPF bundled plugins
+
+ifneq ($(MACOS),true)
+ILDAEIL_FX_ARGS = VST2_FILENAME=Ildaeil.vst/Ildaeil-FX$(LIB_EXT) CLAP_FILENAME=Ildaeil.clap/Ildaeil-FX.clap
+ILDAEIL_MIDI_ARGS = VST2_FILENAME=Ildaeil.vst/Ildaeil-MIDI$(LIB_EXT) CLAP_FILENAME=Ildaeil.clap/Ildaeil-MIDI.clap
+ILDAEIL_SYNTH_ARGS = VST2_FILENAME=Ildaeil.vst/Ildaeil-Synth$(LIB_EXT) CLAP_FILENAME=Ildaeil.clap/Ildaeil-Synth.clap
+endif
+
+# --------------------------------------------------------------
 # Check for X11+OpenGL dependencies
 
 ifneq ($(HAIKU_OR_MACOS_OR_WASM_OR_WINDOWS),true)
@@ -75,10 +84,10 @@ dgl:
 	$(MAKE) -C dpf/dgl opengl
 
 plugins: carla dgl
-	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) all -C plugins/FX
 ifneq ($(WASM),true)
-	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/MIDI
-	$(MAKE) $(CARLA_EXTRA_ARGS) all -C plugins/Synth
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) all -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) all -C plugins/Synth
 endif
 
 ifneq ($(CROSS_COMPILING),true)
@@ -94,27 +103,23 @@ endif
 # --------------------------------------------------------------
 
 install:
-	install -d $(DESTDIR)$(PREFIX)/bin
+	install -d $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap
 	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2
 	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2
 	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-Synth.lv2
-	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-FX.vst
-	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-MIDI.vst
-	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-Synth.vst
+	install -d $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil.vst
 	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/Contents
-	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-MIDI.vst3/Contents
 	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/Contents
+
+	install -m 644 bin/Ildaeil.clap/*      $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap/
 
 	install -m 644 bin/Ildaeil-FX.lv2/*    $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2/
 	install -m 644 bin/Ildaeil-MIDI.lv2/*  $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2/
 	install -m 644 bin/Ildaeil-Synth.lv2/* $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-Synth.lv2/
 
-	install -m 644 bin/Ildaeil-FX.vst/*    $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-FX.vst/
-	install -m 644 bin/Ildaeil-MIDI.vst/*  $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-MIDI.vst/
-	install -m 644 bin/Ildaeil-Synth.vst/* $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil-Synth.vst/
+	install -m 644 bin/Ildaeil.vst/*       $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil.vst/
 
 	cp -rL bin/Ildaeil-FX.vst3/Contents/*-*    $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/Contents/
-	cp -rL bin/Ildaeil-MIDI.vst3/Contents/*-*  $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-MIDI.vst3/Contents/
 	cp -rL bin/Ildaeil-Synth.vst3/Contents/*-* $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/Contents/
 
 # --------------------------------------------------------------
@@ -123,9 +128,9 @@ clean:
 	$(MAKE) distclean -C carla
 	$(MAKE) clean -C dpf/dgl
 	$(MAKE) clean -C dpf/utils/lv2-ttl-generator
-	$(MAKE) clean -C plugins/FX
-	$(MAKE) clean -C plugins/MIDI
-	$(MAKE) clean -C plugins/Synth
+	$(MAKE) $(ILDAEIL_FX_ARGS) clean -C plugins/FX
+	$(MAKE) $(ILDAEIL_MIDI_ARGS) clean -C plugins/MIDI
+	$(MAKE) $(ILDAEIL_SYNTH_ARGS) clean -C plugins/Synth
 	rm -rf bin build
 	rm -f dpf-widgets/opengl/*.d
 	rm -f dpf-widgets/opengl/*.o
