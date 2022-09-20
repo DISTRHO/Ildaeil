@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -18,9 +18,14 @@
 #ifndef DISTRHO_PLUGIN_INFO_H_INCLUDED
 #define DISTRHO_PLUGIN_INFO_H_INCLUDED
 
-#define DISTRHO_PLUGIN_BRAND "DISTRHO"
-#define DISTRHO_PLUGIN_NAME  "Ildaeil-Synth"
-#define DISTRHO_PLUGIN_URI   "https://distrho.kx.studio/plugins/ildaeil#synth"
+#define DISTRHO_PLUGIN_BRAND   "DISTRHO"
+#define DISTRHO_PLUGIN_NAME    "Ildaeil-Synth"
+#define DISTRHO_PLUGIN_URI     "https://distrho.kx.studio/plugins/ildaeil#synth"
+#define DISTRHO_PLUGIN_CLAP_ID "studio.kx.distrho.ildaeil#synth"
+
+#define DISTRHO_PLUGIN_CLAP_FEATURES   "instrument", "stereo"
+#define DISTRHO_PLUGIN_LV2_CATEGORY    "lv2:InstrumentPlugin"
+#define DISTRHO_PLUGIN_VST3_CATEGORIES "Instrument|Stereo"
 
 #define DISTRHO_PLUGIN_HAS_UI             1
 #define DISTRHO_PLUGIN_IS_SYNTH           1

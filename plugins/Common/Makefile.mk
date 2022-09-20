@@ -61,6 +61,7 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 # --------------------------------------------------------------
 # Do some more magic
 
+USE_CLAP_BUNDLE = true
 USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
 
@@ -97,24 +98,34 @@ endif
 # --------------------------------------------------------------
 # Enable all possible plugin types
 
-ifneq ($(WASM),true)
-all: jack lv2 vst2 vst3 carlabins
+ifeq ($(WASM),true)
+TARGETS_EXTRA = jack
 else
-all: jack
+TARGETS_BASE = lv2 vst2 clap
+# VST3 does not do MIDI filter plugins, by design
+ifneq ($(NAME),Ildaeil-MIDI)
+TARGETS_BASE += vst3
 endif
+TARGETS_EXTRA = jack carlabins
+endif
+
+all: $(TARGETS_BASE) $(TARGETS_EXTRA)
 
 # --------------------------------------------------------------
 # special step for carla binaries
 
-ifneq ($(WASM),true)
+ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-bridge-native$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk2$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
 
-carlabins: lv2 vst2 vst3
+carlabins: $(TARGETS_BASE)
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst2))
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(clap))
+ifneq ($(NAME),Ildaeil-MIDI)
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst3))
+endif
 else
 carlabins:
 endif

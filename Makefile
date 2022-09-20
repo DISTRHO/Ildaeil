@@ -20,6 +20,10 @@ DESTDIR ?=
 # --------------------------------------------------------------
 # Carla config
 
+ifeq ($(WASM),true)
+USE_SYSTEM_CARLA_BINS = true
+endif
+
 CARLA_EXTRA_ARGS = CARLA_BACKEND_NAMESPACE=Ildaeil \
 	CAN_GENERATE_LV2_TTL=false \
 	STATIC_PLUGIN_TARGET=true \
@@ -35,7 +39,7 @@ endif
 
 CARLA_TARGETS = static-plugin
 
-ifneq ($(WASM),true)
+ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_TARGETS += bridges-plugin bridges-ui
 endif
 
