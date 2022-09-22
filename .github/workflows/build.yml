@@ -2,13 +2,9 @@ name: build
 
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - '*'
+
 env:
-  CACHE_VERSION: 1
+  CACHE_VERSION: 2
   DEBIAN_FRONTEND: noninteractive
   HOMEBREW_NO_AUTO_UPDATE: 1
 
@@ -29,7 +25,8 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
         run: |
           sudo dpkg --add-architecture arm64
@@ -38,10 +35,8 @@ jobs:
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-aarch64-linux-gnu libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 qemu-user-static
+          sudo apt-get install -yqq g++-aarch64-linux-gnu libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 qemu-user-static
       - name: Build extra dependencies
-        env:
-          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux-aarch64
@@ -49,7 +44,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-aarch64; popd
           make features
-          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -75,7 +70,8 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
         run: |
           sudo dpkg --add-architecture armhf
@@ -84,10 +80,8 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-arm-linux-gnueabihf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf qemu-user-static
+          sudo apt-get install -yqq g++-arm-linux-gnueabihf libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf qemu-user-static
       - name: Build extra dependencies
-        env:
-          PKG_CONFIG_PATH: /usr/lib/arm-linux-gnueabihf/pkgconfig
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux-armhf
@@ -95,7 +89,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-armhf; popd
           make features
-          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -121,15 +115,14 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-multilib libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
+          sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
       - name: Build extra dependencies
-        env:
-          PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/bootstrap-cardinal.sh linux-i686
@@ -137,13 +130,58 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-i686; popd
           make features
-          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}-linux-i686-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
+          path: |
+            bin/*
+
+  linux-riscv64:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Set up cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/PawPawBuilds
+          key: linux-riscv64-v${{ env.CACHE_VERSION }}
+      - name: Fix GitHub's mess
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update -qq
+          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+      - name: Set up dependencies
+        run: |
+          sudo dpkg --add-architecture riscv64
+          sudo sed -i "s/deb http/deb [arch=amd64] http/" /etc/apt/sources.list
+          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/ports-riscv64.list
+          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-riscv64.list
+          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-riscv64.list
+          sudo apt-get update -qq
+          sudo apt-get install -yqq g++-riscv64-linux-gnu libasound2-dev:riscv64 libdbus-1-dev:riscv64 libgl1-mesa-dev:riscv64 libglapi-mesa:riscv64 libglvnd0:riscv64 libglib2.0-dev:riscv64 libx11-dev:riscv64 libxcursor-dev:riscv64 libxext-dev:riscv64 libxrandr-dev:riscv64 qemu-user-static
+      - name: Build extra dependencies
+        run: |
+          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
+          ./PawPaw/bootstrap-cardinal.sh linux-riscv64
+      - name: Build linux riscv64
+        run: |
+          pushd PawPaw; source local.env linux-riscv64; popd
+          make features
+          make NOOPT=true WITH_LTO=true -j $(nproc)
+      - name: Set sha8
+        id: slug
+        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.repository.name }}-linux-riscv64-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             bin/*
 
@@ -162,7 +200,7 @@ jobs:
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libasound2-dev libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -171,7 +209,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux; popd
           make features
-          make NOOPT=true SKIP_RTAUDIO_FALLBACK=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -219,7 +257,7 @@ jobs:
             !bin/vst3
 
   win32:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -234,13 +272,13 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+          sudo apt-get install -yqq --allow-downgrades libgd3/jammy
+          sudo apt-get purge -yqq libmono* moby* mono* msbuild* php* libgdiplus libpcre2-posix3 nuget
       - name: Set up dependencies
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable:i386
+          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -262,7 +300,7 @@ jobs:
             !bin/*-dssi.dll
 
   win64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -277,8 +315,8 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+          sudo apt-get install -yqq --allow-downgrades libgd3/jammy
+          sudo apt-get purge -yqq libmono* moby* mono* msbuild* php* libgdiplus libpcre2-posix3 nuget
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
@@ -312,21 +350,30 @@ jobs:
       - name: Set up dependencies
         run: |
           # custom repos
-          wget https://launchpad.net/~kxstudio-debian/+archive/kxstudio/+files/kxstudio-repos_10.0.3_all.deb
-          sudo dpkg -i kxstudio-repos_10.0.3_all.deb
+          wget https://launchpad.net/~kxstudio-debian/+archive/kxstudio/+files/kxstudio-repos_11.1.0_all.deb
+          sudo dpkg -i kxstudio-repos_11.1.0_all.deb
           sudo apt-get update -qq
           # build-deps
-          sudo apt-get install -yqq libgl1-mesa-dev liblo-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
           # runtime testing
-          sudo apt-get install -yqq carla-git lilv-utils lv2-dev lv2lint valgrind
+          sudo apt-get install -yqq carla-git lilv-utils lv2-dev lv2lint kxstudio-lv2-extensions mod-lv2-extensions valgrind xvfb
       - name: Build plugins
         env:
           CFLAGS: -g
-          CXXFLAGS: -g -DDPF_ABORT_ON_ERROR
+          CXXFLAGS: -g -DDPF_ABORT_ON_ERROR -DDPF_RUNTIME_TESTING
           LDFLAGS: -static-libgcc -static-libstdc++
         run: |
           make features
           make NOOPT=true SKIP_STRIPPING=true -j $(nproc)
+      - name: Run Ildaeil self-tests
+        run: |
+          xvfb-run valgrind \
+                --gen-suppressions=all \
+                --error-exitcode=255 \
+                --leak-check=no \
+                --track-origins=yes \
+                --suppressions=./dpf/utils/valgrind-dpf.supp \
+                ./bin/Ildaeil-FX selftest
       - name: Validate LV2 ttl syntax
         run: |
           lv2_validate \
