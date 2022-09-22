@@ -129,7 +129,7 @@ install:
 # ---------------------------------------------------------------------------------------------------------------------
 
 clean:
-	$(MAKE) distclean -C carla
+	$(MAKE) $(CARLA_EXTRA_ARGS) distclean -C carla
 	$(MAKE) clean -C dpf/dgl
 	$(MAKE) clean -C dpf/utils/lv2-ttl-generator
 	$(MAKE) $(ILDAEIL_FX_ARGS) clean -C plugins/FX
