@@ -24,6 +24,7 @@ You can press "Show Custom GUI" to open the plugin UI in an external window.
 The current formats Ildaeil can work as are:
 
 - JACK/Standalone
+- CLAP
 - LV2
 - VST2
 - VST3
@@ -32,6 +33,7 @@ And it can load the following plugin formats:
 
 - Internal (from Carla)
 - LV2
+- JSFX
 
 ## Goals
 
@@ -42,7 +44,6 @@ Later on, in theory, it should be able to load the following plugin formats:
 - VST2
 - VST3
 - AU (macOS only)
-- JSFX
 
 Eventually the following files could be loaded too:
 
