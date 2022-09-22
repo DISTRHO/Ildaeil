@@ -6,18 +6,22 @@
 
 include dpf/Makefile.base.mk
 
-# --------------------------------------------------------------
+# also set in:
+# plugins/Common/IldaeilPlugin.cpp `getVersion`
+VERSION = 1.1
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Build targets
 
 all: carla dgl plugins gen
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Build config
 
 PREFIX  ?= /usr/local
 DESTDIR ?=
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Carla config
 
 ifeq ($(WASM),true)
@@ -43,7 +47,7 @@ ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_TARGETS += bridges-plugin bridges-ui
 endif
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # DPF bundled plugins
 
 ifneq ($(MACOS),true)
@@ -52,7 +56,7 @@ ILDAEIL_MIDI_ARGS = VST2_FILENAME=Ildaeil.vst/Ildaeil-MIDI$(LIB_EXT) CLAP_FILENA
 ILDAEIL_SYNTH_ARGS = VST2_FILENAME=Ildaeil.vst/Ildaeil-Synth$(LIB_EXT) CLAP_FILENAME=Ildaeil.clap/Ildaeil-Synth.clap
 endif
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Check for X11+OpenGL dependencies
 
 ifneq ($(HAIKU_OR_MACOS_OR_WASM_OR_WINDOWS),true)
@@ -75,7 +79,7 @@ endif
 
 endif
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 
 carla: dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
@@ -100,7 +104,7 @@ else
 gen:
 endif
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 
 install:
 	install -d $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap
@@ -122,7 +126,7 @@ install:
 	cp -rL bin/Ildaeil-FX.vst3/Contents/*-*    $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/Contents/
 	cp -rL bin/Ildaeil-Synth.vst3/Contents/*-* $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/Contents/
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 
 clean:
 	$(MAKE) distclean -C carla
@@ -135,6 +139,49 @@ clean:
 	rm -f dpf-widgets/opengl/*.d
 	rm -f dpf-widgets/opengl/*.o
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
+# tarball target, generating release source-code tarballs ready for packaging
+
+TAR_ARGS = \
+	--exclude=".appveyor*" \
+	--exclude=".ci*" \
+	--exclude=".clang*" \
+	--exclude=".drone*" \
+	--exclude=".editor*" \
+	--exclude=".git*" \
+	--exclude="*.kdev*" \
+	--exclude=".travis*" \
+	--exclude=".vscode*" \
+	--exclude="*.d" \
+	--exclude="*.o" \
+	--exclude=bin \
+	--exclude=build \
+	--exclude=carla/data \
+	--exclude=carla/source/frontend \
+	--exclude=carla/source/interposer \
+	--exclude=carla/source/libjack \
+	--exclude=carla/source/native-plugins/resources \
+	--exclude=carla/source/rest \
+	--exclude=carla/source/tests.old \
+	--exclude=carla/source/theme \
+	--exclude=carla/resources \
+	--exclude=dpf/build \
+	--exclude=dpf/cmake \
+	--exclude=dpf/examples \
+	--exclude=dpf/lac \
+	--exclude=dpf/tests \
+	--exclude=dpf-widgets/generic \
+	--exclude=dpf-widgets/opengl/Blendish* \
+	--exclude=dpf-widgets/opengl/DearImGuiColorTextEditor* \
+	--exclude=dpf-widgets/tests \
+	--transform='s,^\.\.,-.-.,' \
+	--transform='s,^\.,Ildaeil-$(VERSION),' \
+	--transform='s,^-\.-\.,..,' \
+
+tarball:
+	rm -f ../Ildaeil-$(VERSION).tar.xz
+	tar -c --lzma $(TAR_ARGS) -f ../Ildaeil-$(VERSION).tar.xz .
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 .PHONY: carla plugins
