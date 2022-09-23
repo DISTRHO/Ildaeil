@@ -179,8 +179,8 @@ TAR_ARGS = \
 	--transform='s,^-\.-\.,..,' \
 
 tarball:
-	rm -f ../Ildaeil-$(VERSION).tar.xz
-	tar -c --lzma $(TAR_ARGS) -f ../Ildaeil-$(VERSION).tar.xz .
+	rm -f ../Ildaeil-src-$(VERSION).tar.xz
+	tar -c --lzma $(TAR_ARGS) -f ../Ildaeil-src-$(VERSION).tar.xz .
 
 # ---------------------------------------------------------------------------------------------------------------------
 
