@@ -1021,7 +1021,8 @@ protected:
                 if (param.readonly)
                 {
                     ImGui::BeginDisabled();
-                    ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.printformat, ImGuiSliderFlags_NoInput);
+                    ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.printformat,
+                                       ImGuiSliderFlags_NoInput | (param.log ? ImGuiSliderFlags_Logarithmic : 0x0));
                     ImGui::EndDisabled();
                     continue;
                 }
@@ -1044,7 +1045,7 @@ protected:
                 else
                 {
                     const bool ret = param.log
-                                   ? ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.printformat, 2.0f)
+                                   ? ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.printformat, ImGuiSliderFlags_Logarithmic)
                                    : ImGui::SliderFloat(param.name, &ui->values[i], param.min, param.max, param.printformat);
                     if (ret)
                     {
