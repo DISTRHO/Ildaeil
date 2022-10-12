@@ -132,6 +132,14 @@ jobs:
           pushd PawPaw; source local.env linux-i686; popd
           make features
           make NOOPT=true WITH_LTO=true -j $(nproc)
+      - name: Build linux i686 extra
+        env:
+          CFLAGS: -m32
+          CXXFLAGS: -m32
+          LDFLAGS: -m32 -static-libgcc -static-libstdc++
+          PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
+        run: |
+          sudo apt-get install -yqq g++-multilib
           make WITH_LTO=true extra -j $(nproc)
       - name: Set sha8
         id: slug
@@ -207,6 +215,7 @@ jobs:
           sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq libasound2-dev libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
           sudo apt-get install -yqq g++-multilib libx11-dev:i386
@@ -220,6 +229,8 @@ jobs:
           pushd PawPaw; source local.env linux; popd
           make features
           make NOOPT=true WITH_LTO=true -j $(nproc)
+      - name: Build linux x86_64 extra
+        run: |
           make WITH_LTO=true extra -j $(nproc)
       - name: Set sha8
         id: slug
@@ -299,6 +310,10 @@ jobs:
           pushd PawPaw; source local.env win32; popd
           make features
           make NOOPT=true WITH_LTO=true -j $(nproc)
+      - name: Build win32 cross-compiled extra
+        run: |
+          pushd PawPaw; source local.env win32; popd
+          make NOOPT=true WITH_LTO=true extra -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -330,6 +345,7 @@ jobs:
           sudo apt-get purge -yqq libmono* moby* mono* msbuild* php* libgdiplus libpcre2-posix3 nuget
       - name: Set up dependencies
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine-stable
       - name: Build extra dependencies
@@ -341,6 +357,10 @@ jobs:
           pushd PawPaw; source local.env win64; popd
           make features
           make NOOPT=true WITH_LTO=true -j $(nproc)
+      - name: Build win64 cross-compiled extra
+        run: |
+          pushd PawPaw; source local.env win64; popd
+          make NOOPT=true WITH_LTO=true extra -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
