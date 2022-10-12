@@ -167,7 +167,7 @@ class IldaeilUI : public UI,
     bool fPluginSearchFirstShow;
     char fPluginSearchString[0xff];
 
-    String fPopupError;
+    String fPopupError, fPluginFilename;
     Size<uint> fNextSize;
 
     struct RunnerData {
@@ -533,6 +533,7 @@ public:
         {
             fPluginRunning = true;
             fPluginGenericUI = nullptr;
+            fPluginFilename.clear();
             showPluginUI(handle, false);
 
 #ifdef WASM_TESTING
@@ -552,6 +553,36 @@ public:
             fPopupError = carla_get_last_error(handle);
             d_stdout("got error: %s", fPopupError.buffer());
             fDrawingState = kDrawingPluginError;
+        }
+
+        repaint();
+    }
+
+    void loadFileAsPlugin(const CarlaHostHandle handle, const char* const filename)
+    {
+        if (fPluginRunning || fPluginId != 0)
+        {
+            hidePluginUI(handle);
+            carla_replace_plugin(handle, fPluginId);
+        }
+
+        carla_set_engine_option(handle, ENGINE_OPTION_PREFER_PLUGIN_BRIDGES, fPluginWillRunInBridgeMode, nullptr);
+
+        const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+
+        if (carla_load_file(handle, filename))
+        {
+            fPluginRunning = true;
+            fPluginGenericUI = nullptr;
+            fPluginFilename = filename;
+            showPluginUI(handle, false);
+        }
+        else
+        {
+            fPopupError = carla_get_last_error(handle);
+            d_stdout("got error: %s", fPopupError.buffer());
+            fDrawingState = kDrawingPluginError;
+            fPluginFilename.clear();
         }
 
         repaint();
@@ -609,7 +640,10 @@ protected:
 
         case kIdleResetPlugin:
             fIdleState = kIdleNothing;
-            loadPlugin(handle, carla_get_plugin_info(handle, fPluginId)->label);
+            if (fPluginFilename.isNotEmpty())
+                loadFileAsPlugin(handle, fPluginFilename.buffer());
+            else
+                loadPlugin(handle, carla_get_plugin_info(handle, fPluginId)->label);
             break;
 
         case kIdleOpenFileUI:
@@ -643,10 +677,19 @@ protected:
             fIdleState = kIdleNothing;
             if (fPluginRunning)
                 hidePluginUI(handle);
-            fPluginSelected = -1;
-            stopRunner();
-            fPluginType = fNextPluginType;
-            initAndStartRunner();
+            if (fNextPluginType == PLUGIN_TYPE_COUNT)
+            {
+                FileBrowserOptions opts;
+                opts.title = "Load from file";
+                openFileBrowser(opts);
+            }
+            else
+            {
+                fPluginSelected = -1;
+                stopRunner();
+                fPluginType = fNextPluginType;
+                initAndStartRunner();
+            }
             break;
 
         case kIdleNothing:
@@ -689,7 +732,12 @@ protected:
     void uiFileBrowserSelected(const char* const filename) override
     {
         if (fPlugin != nullptr && fPlugin->fCarlaHostHandle != nullptr && filename != nullptr)
-            carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_STRING, "file", filename);
+        {
+            if (fNextPluginType == PLUGIN_TYPE_COUNT)
+                loadFileAsPlugin(fPlugin->fCarlaHostHandle, filename);
+            else
+                carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_STRING, "file", filename);
+        }
     }
 
     bool initAndStartRunner()
@@ -1087,6 +1135,7 @@ protected:
             getPluginTypeAsString(PLUGIN_INTERNAL),
             getPluginTypeAsString(PLUGIN_LV2),
             getPluginTypeAsString(PLUGIN_JSFX),
+            "Load from file..."
         };
 
         setupMainWindowPos();
@@ -1156,6 +1205,9 @@ protected:
                     break;
                 case 2:
                     fNextPluginType = PLUGIN_JSFX;
+                    break;
+                case 3:
+                    fNextPluginType = PLUGIN_TYPE_COUNT;
                     break;
                 }
             }
