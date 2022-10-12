@@ -42,9 +42,27 @@ CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
 endif
 
 CARLA_TARGETS = static-plugin
+CARLA_EXTRA_TARGETS =
 
 ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_TARGETS += bridges-plugin bridges-ui
+endif
+
+ifeq ($(CPU_X86_64),true)
+ifeq ($(WINDOWS),true)
+CARLA_EXTRA_TARGETS += win32
+else ifneq ($(MACOS),true)
+CARLA_EXTRA_TARGETS += posix32
+endif
+endif
+
+ifeq ($(CPU_I386_OR_X86_64),true)
+ifeq ($(LINUX),true)
+CARLA_EXTRA_TARGETS += wine32
+ifeq ($(CPU_X86_64),true)
+CARLA_EXTRA_TARGETS += wine64
+endif
+endif
 endif
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -83,6 +101,18 @@ endif
 
 carla: dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
+
+extra: carla
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_EXTRA_TARGETS)
+ifeq ($(CPU_I386_OR_X86_64),true)
+ifeq ($(LINUX),true)
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla win32 AR=i686-w64-mingw32-ar CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++
+ifeq ($(CPU_X86_64),true)
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla win64 AR=x86_64-w64-mingw32-ar CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++
+endif
+endif
+endif
+	$(MAKE) plugins CARLA_EXTRA_BINARIES=true
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
