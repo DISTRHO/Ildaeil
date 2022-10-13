@@ -125,7 +125,7 @@ CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-bridge-native$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk2$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
 
-ifeq ($(CARLA_EXTRA_BINARIES),true)
+ifeq ($(CARLA_EXTRA_TARGETS),true)
 
 # 32bit bridge
 ifeq ($(CPU_X86_64),true)
@@ -137,8 +137,7 @@ endif
 endif
 
 # Windows bridges
-ifeq ($(CPU_I386_OR_X86_64),true)
-ifeq ($(LINUX),true)
+ifeq ($(CPU_I386_OR_X86_64)$(LINUX),truetrue)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-win32.exe
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/jackbridge-wine32.dll
 ifeq ($(CPU_X86_64),true)
@@ -146,9 +145,8 @@ CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-win64.exe
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/jackbridge-wine64.dll
 endif
 endif
-endif
 
-endif # CARLA_EXTRA_BINARIES
+endif # CARLA_EXTRA_TARGETS
 
 carlabins: $(TARGETS_BASE)
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))

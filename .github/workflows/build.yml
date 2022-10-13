@@ -122,7 +122,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable wine64-tools
+          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 lib32stdc++-9-dev libx32stdc++-9-dev libwine-dev:i386 wine-stable wine64-tools
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -131,16 +131,11 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-i686; popd
           make features
-          make NOOPT=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true all extra-win32 extra-wine32 -j $(nproc)
       - name: Build linux i686 extra
-        env:
-          CFLAGS: -m32
-          CXXFLAGS: -m32
-          LDFLAGS: -m32 -static-libgcc -static-libstdc++
-          PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
         run: |
-          sudo apt-get install -yqq g++-multilib
-          make WITH_LTO=true extra -j $(nproc)
+          pushd PawPaw; source local.env linux; popd
+          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -228,10 +223,13 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux; popd
           make features
-          make NOOPT=true WITH_LTO=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true all extra-posix32 extra-win32 extra-win64 extra-wine64 -j $(nproc)
       - name: Build linux x86_64 extra
         run: |
-          make WITH_LTO=true extra -j $(nproc)
+          sudo apt-get install libwine-dev:i386
+          pushd PawPaw; source local.env linux; popd
+          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true extra-wine32 -j $(nproc)
+          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -309,11 +307,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env win32; popd
           make features
-          make NOOPT=true WITH_LTO=true -j $(nproc)
-      - name: Build win32 cross-compiled extra
-        run: |
-          pushd PawPaw; source local.env win32; popd
-          make NOOPT=true WITH_LTO=true extra -j $(nproc)
+          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
@@ -356,11 +350,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env win64; popd
           make features
-          make NOOPT=true WITH_LTO=true -j $(nproc)
-      - name: Build win64 cross-compiled extra
-        run: |
-          pushd PawPaw; source local.env win64; popd
-          make NOOPT=true WITH_LTO=true extra -j $(nproc)
+          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"

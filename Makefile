@@ -42,28 +42,32 @@ CARLA_EXTRA_ARGS += EXTERNAL_PLUGINS=true
 endif
 
 CARLA_TARGETS = static-plugin
-CARLA_EXTRA_TARGETS =
 
 ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_TARGETS += bridges-plugin bridges-ui
-endif
 
+ifeq ($(CARLA_EXTRA_TARGETS),true)
+
+# 32bit bridge
 ifeq ($(CPU_X86_64),true)
 ifeq ($(WINDOWS),true)
-CARLA_EXTRA_TARGETS += win32
+CARLA_TARGETS += win32
 else ifneq ($(MACOS),true)
-CARLA_EXTRA_TARGETS += posix32
+CARLA_TARGETS += posix32
 endif
 endif
 
-ifeq ($(CPU_I386_OR_X86_64),true)
-ifeq ($(LINUX),true)
-CARLA_EXTRA_TARGETS += wine32
+# native wine bridge
+ifeq ($(CPU_I386_OR_X86_64)$(LINUX),truetrue)
 ifeq ($(CPU_X86_64),true)
-CARLA_EXTRA_TARGETS += wine64
+CARLA_TARGETS += wine64
+else
+CARLA_TARGETS += wine32
 endif
 endif
-endif
+
+endif # CARLA_EXTRA_TARGETS
+endif # USE_SYSTEM_CARLA_BINS
 
 # ---------------------------------------------------------------------------------------------------------------------
 # DPF bundled plugins
@@ -102,17 +106,27 @@ endif
 carla: dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
 
-extra: carla
-	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_EXTRA_TARGETS)
-ifeq ($(CPU_I386_OR_X86_64),true)
-ifeq ($(LINUX),true)
+extra-bins:
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/FX
+ifneq ($(WASM),true)
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) carlabins -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) carlabins -C plugins/Synth
+endif
+
+extra-posix32:
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla posix32
+
+extra-win32:
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla win32 AR=i686-w64-mingw32-ar CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++
-ifeq ($(CPU_X86_64),true)
+
+extra-win64:
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla win64 AR=x86_64-w64-mingw32-ar CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++
-endif
-endif
-endif
-	$(MAKE) plugins CARLA_EXTRA_BINARIES=true
+
+extra-wine32:
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla wine32
+
+extra-wine64:
+	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla wine64
 
 dgl:
 	$(MAKE) -C dpf/dgl opengl
