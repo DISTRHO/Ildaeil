@@ -736,7 +736,7 @@ protected:
             if (fNextPluginType == PLUGIN_TYPE_COUNT)
                 loadFileAsPlugin(fPlugin->fCarlaHostHandle, filename);
             else
-                carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_STRING, "file", filename);
+                carla_set_custom_data(fPlugin->fCarlaHostHandle, fPluginId, CUSTOM_DATA_TYPE_PATH, "file", filename);
         }
     }
 

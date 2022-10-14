@@ -393,6 +393,8 @@ protected:
 
     void deactivate() override
     {
+        checkLatencyChanged();
+
         if (fCarlaPluginHandle != nullptr)
             fCarlaPluginDescriptor->deactivate(fCarlaPluginHandle);
     }
