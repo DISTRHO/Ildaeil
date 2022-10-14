@@ -9,8 +9,7 @@ The Ildaeil name comes from the korean 일대일, which means "one to one".
 ## Details
 
 Ildaeil basically works as a mini-wrapper around [Carla](https://github.com/falkTX/Carla), leveraging it for all its host support.  
-Everything should be working except plugin parameters (none are exposed to the host).  
-Also, **only LV2 hosting is enabled at the moment**.
+Everything should be working except plugin parameters (none are exposed to the host).
 
 When open, Ildaeil will show a list of plugins to pick from or the plugin editor if one is already selected.
 
