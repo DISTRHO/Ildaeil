@@ -131,7 +131,15 @@ public:
         fCarlaHostHandle = carla_create_native_plugin_host_handle(fCarlaPluginDescriptor, fCarlaPluginHandle);
         DISTRHO_SAFE_ASSERT_RETURN(fCarlaHostHandle != nullptr,);
 
-        if (const char* const bundlePath = getBundlePath())
+        const char* const bundlePath = getBundlePath();
+       #ifdef CARLA_OS_WIN
+        #define EXT ".exe"
+       #else
+        #define EXT ""
+       #endif
+
+        if (bundlePath != nullptr
+            && water::File(bundlePath + water::String(DISTRHO_OS_SEP_STR "carla-bridge-native" EXT)).existsAsFile())
         {
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, bundlePath);
             // carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "");
@@ -146,6 +154,8 @@ public:
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
            #endif
         }
+
+        #undef EXT
 
         if (const char* const path = std::getenv("LV2_PATH"))
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LV2, path);
