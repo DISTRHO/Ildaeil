@@ -131,10 +131,11 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-i686; popd
           make features
-          make NOOPT=true WITH_LTO=true all extra-win32 extra-wine32 -j $(nproc)
+          make NOOPT=true WITH_LTO=true all extra-win32 -j $(nproc)
       - name: Build linux i686 extra
         run: |
-          pushd PawPaw; source local.env linux; popd
+          pushd PawPaw; source local.env linux-i686; popd
+          make NOOPT=true WITH_LTO=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
@@ -228,7 +229,7 @@ jobs:
         run: |
           sudo apt-get install libwine-dev:i386
           pushd PawPaw; source local.env linux; popd
-          make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true extra-wine32 -j $(nproc)
+          make NOOPT=true WITH_LTO=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
