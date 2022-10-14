@@ -8,7 +8,7 @@ include dpf/Makefile.base.mk
 
 # also set in:
 # plugins/Common/IldaeilPlugin.cpp `getVersion`
-VERSION = 1.1
+VERSION = 1.2
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Build targets
