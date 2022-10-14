@@ -4,7 +4,7 @@ on:
   push:
 
 env:
-  CACHE_VERSION: 4
+  CACHE_VERSION: 5
   DEBIAN_FRONTEND: noninteractive
   HOMEBREW_NO_AUTO_UPDATE: 1
 
@@ -101,9 +101,6 @@ jobs:
 
   linux-i686:
     runs-on: ubuntu-20.04
-    env:
-      PAWPAW_SKIP_FORTIFY: 1
-      PAWPAW_SKIP_LTO: 1
     steps:
       - uses: actions/checkout@v2
         with:
@@ -134,13 +131,7 @@ jobs:
         run: |
           pushd PawPaw; source local.env linux-i686; popd
           make features
-          make NOOPT=true all extra-win32 -j $(nproc)
-      - name: Build linux i686 extra
-        run: |
-          sudo apt-get install -yqq g++-multilib wine32-tools
-          pushd PawPaw; source local.env linux-i686; popd
-          make NOOPT=true extra-wine32 -j $(nproc)
-          make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
+          make NOOPT=true WITH_LTO=true -j $(nproc)
       - name: Set sha8
         id: slug
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
