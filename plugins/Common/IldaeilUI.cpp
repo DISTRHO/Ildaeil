@@ -406,8 +406,8 @@ public:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fPluginRunning,);
 
-        fPluginHostWindow.hide();
-        carla_show_custom_ui(handle, fPluginId, false);
+        if (fPluginHostWindow.hide())
+            carla_show_custom_ui(handle, fPluginId, false);
     }
 
     void createOrUpdatePluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* info = nullptr)
@@ -664,7 +664,7 @@ protected:
 
         case kIdleHidePluginUI:
             fIdleState = kIdleNothing;
-            carla_show_custom_ui(handle, fPluginId, false);
+            hidePluginUI(handle);
             break;
 
         case kIdleGiveIdleToUI:

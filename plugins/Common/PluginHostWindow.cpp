@@ -138,23 +138,34 @@ struct PluginHostWindow::PrivateData
 #endif
     }
 
-    void hide()
+    bool hide()
     {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
         if (view != nullptr)
+        {
             [view setHidden:YES];
-        [NSOpenGLContext clearCurrentContext];
+            [NSOpenGLContext clearCurrentContext];
+            return true;
+        }
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
             ShowWindow(pluginWindow, SW_HIDE);
             pluginWindow = nullptr;
+            return true;
         }
 #else
-        pluginWindow = 0;
+        if (pluginWindow != 0)
+        {
+            XUnmapWindow(display, pluginWindow);
+            XSync(display, True);
+            pluginWindow = 0;
+            return true;
+        }
 #endif
+        return false;
     }
 
     void idle()
@@ -192,7 +203,9 @@ struct PluginHostWindow::PrivateData
 
                 if (numChildren > 0 && childWindows != nullptr)
                 {
-                    pluginWindow = childWindows[0];
+                    // pick last child, needed for NTK based UIs which do not delete/remove previous windows.
+                    //sadly this breaks ildaeil-within-ildaeil recursion.. :(
+                    pluginWindow = childWindows[numChildren - 1];
                     XFree(childWindows);
                 }
             }
@@ -294,6 +307,7 @@ struct PluginHostWindow::PrivateData
             {
                 lookingForChildren = false;
                 XMoveWindow(display, pluginWindow, xOffset, yOffset);
+                XSync(display, True);
                 pluginWindowCallbacks->pluginWindowResized(width, height);
             }
         }
@@ -340,9 +354,9 @@ void* PluginHostWindow::attachAndGetWindowHandle()
     return pData->attachAndGetWindowHandle();
 }
 
-void PluginHostWindow::hide()
+bool PluginHostWindow::hide()
 {
-    pData->hide();
+    return pData->hide();
 }
 
 void PluginHostWindow::idle()

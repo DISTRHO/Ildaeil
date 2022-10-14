@@ -36,7 +36,7 @@ public:
     ~PluginHostWindow();
 
     void* attachAndGetWindowHandle();
-    void hide();
+    bool hide();
     void idle();
     void setPositionAndSize(uint x, uint y, uint width, uint height);
 };
