@@ -122,7 +122,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 lib32stdc++-9-dev libx32stdc++-9-dev libwine-dev:i386 wine-stable wine64-tools
+          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 libwine-dev:i386 wine-stable wine64-tools
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -134,6 +134,7 @@ jobs:
           make NOOPT=true WITH_LTO=true all extra-win32 -j $(nproc)
       - name: Build linux i686 extra
         run: |
+          sudo apt-get install -yqq g++-multilib wine32-tools
           pushd PawPaw; source local.env linux-i686; popd
           make NOOPT=true WITH_LTO=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true WITH_LTO=true -j $(nproc)
