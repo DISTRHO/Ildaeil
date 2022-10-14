@@ -35,20 +35,26 @@ And it can load the following plugin formats:
 - LV2
 - JSFX
 
+With a few extra formats through the "Load from file..." action:
+
+- CLAP plugins
+- VST2 plugins
+- Audio files (through internal audio file player, synced to transport)
+- MIDI files (through internal MIDI file player, synced to transport)
+- SFZ files (through internal SFZero)
+
 ## Goals
 
 Later on, in theory, it should be able to load the following plugin formats:
 
 - LADSPA
 - DSSI
-- VST2
 - VST3
 - AU (macOS only)
 
 Eventually the following files could be loaded too:
 
 - SF2/3 files (through internal FluidSynth)
-- SFZ files (through internal SFZero)
 
 ## Screenshots
 
