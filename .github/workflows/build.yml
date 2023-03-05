@@ -35,7 +35,7 @@ jobs:
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-aarch64-linux-gnu libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 qemu-user-static
+          sudo apt-get install -yqq g++-aarch64-linux-gnu libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 gperf qemu-user-static
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -80,7 +80,7 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-arm-linux-gnueabihf libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf qemu-user-static
+          sudo apt-get install -yqq g++-arm-linux-gnueabihf libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf gperf qemu-user-static
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -121,7 +121,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386
+          sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386 gperf
           sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 libwine-dev:i386 wine-stable wine64-tools
       - name: Build extra dependencies
         run: |
@@ -167,7 +167,7 @@ jobs:
           echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-riscv64.list
           echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-riscv64.list
           sudo apt-get update -qq
-          sudo apt-get install -yqq g++-riscv64-linux-gnu libasound2-dev:riscv64 libdbus-1-dev:riscv64 libgl1-mesa-dev:riscv64 libglapi-mesa:riscv64 libglvnd0:riscv64 libglib2.0-dev:riscv64 libx11-dev:riscv64 libxcursor-dev:riscv64 libxext-dev:riscv64 libxrandr-dev:riscv64 qemu-user-static
+          sudo apt-get install -yqq g++-riscv64-linux-gnu libasound2-dev:riscv64 libdbus-1-dev:riscv64 libgl1-mesa-dev:riscv64 libglapi-mesa:riscv64 libglvnd0:riscv64 libglib2.0-dev:riscv64 libx11-dev:riscv64 libxcursor-dev:riscv64 libxext-dev:riscv64 libxrandr-dev:riscv64 gperf qemu-user-static
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -208,7 +208,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq libasound2-dev libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libasound2-dev libdbus-1-dev libgl1-mesa-dev libglib2.0-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev gperf
           sudo apt-get install -yqq g++-multilib libx11-dev:i386
           sudo apt-get install -yqq binutils-mingw-w64-i686 binutils-mingw-w64-x86-64 g++-mingw-w64-i686 g++-mingw-w64-x86-64 mingw-w64 wine-stable wine64-tools
       - name: Build extra dependencies
@@ -294,7 +294,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 wine-stable
+          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 gperf mingw-w64 wine-stable
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -337,7 +337,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 mingw-w64 wine-stable
+          sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 gperf mingw-w64 wine-stable
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
@@ -367,7 +367,7 @@ jobs:
       - name: Set up dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -yqq libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev gperf
       - name: Create source tarball
         run: |
           make tarball
@@ -414,7 +414,7 @@ jobs:
           sudo dpkg -i kxstudio-repos_11.1.0_all.deb
           sudo apt-get update -qq
           # build-deps
-          sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+          sudo apt-get install -yqq libdbus-1-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev gperf
           # runtime testing
           sudo apt-get install -yqq carla-git lilv-utils lv2-dev lv2lint kxstudio-lv2-extensions mod-lv2-extensions valgrind xvfb
       - name: Build plugins
