@@ -6,7 +6,19 @@
 
 # NOTE This file MUST be imported after setting `NAME`
 
-# --------------------------------------------------------------
+ifneq ($(CARLA_BACKEND_NAMESPACE),Ildaeil)
+$(error wrong build setup)
+endif
+
+ifneq ($(STATIC_PLUGIN_TARGET),true)
+$(error wrong build setup)
+endif
+
+ifneq ($(USING_CUSTOM_DPF),true)
+$(error wrong build setup)
+endif
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Files to build
 
 FILES_DSP = \
@@ -17,48 +29,24 @@ FILES_UI = \
 	../Common/PluginHostWindow.cpp \
 	../../dpf-widgets/opengl/DearImGui.cpp
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Carla stuff
 
 ifneq ($(DEBUG),true)
 EXTERNAL_PLUGINS = true
 endif
 
-CWD = ../../carla/source
-include $(CWD)/Makefile.deps.mk
-
-CARLA_BUILD_DIR = ../../carla/build
-ifeq ($(DEBUG),true)
-CARLA_BUILD_TYPE = Debug
-else
-CARLA_BUILD_TYPE = Release
-endif
-
-CARLA_EXTRA_LIBS  = $(CARLA_BUILD_DIR)/plugin/$(CARLA_BUILD_TYPE)/carla-host-plugin.cpp.o
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_engine_plugin.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/carla_plugin.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/native-plugins.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/audio_decoder.a
-ifneq ($(WASM),true)
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/dgl.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/jackbridge.min.a
-endif
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/lilv.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/rtmempool.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/sfzero.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/water.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/ysfx.a
-CARLA_EXTRA_LIBS += $(CARLA_BUILD_DIR)/modules/$(CARLA_BUILD_TYPE)/zita-resampler.a
+include ../../carla/source/Makefile.deps.mk
 
 # FIXME
 ifeq ($(WASM),true)
 STATIC_CARLA_PLUGIN_LIBS = -lsndfile -lopus -lFLAC -lvorbisenc -lvorbis -logg -lm
 endif
 
-EXTRA_DEPENDENCIES = $(CARLA_EXTRA_LIBS)
-EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
+EXTRA_DEPENDENCIES = ../../carla/bin/libcarla_host-plugin.a
+EXTRA_LIBS = ../../carla/bin/libcarla_host-plugin.a $(STATIC_CARLA_PLUGIN_LIBS)
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Do some more magic
 
 USE_CLAP_BUNDLE = true
@@ -82,9 +70,10 @@ BUILD_CXX_FLAGS += -I../Common
 BUILD_CXX_FLAGS += -I../../dpf-widgets/generic
 BUILD_CXX_FLAGS += -I../../dpf-widgets/opengl
 
-BUILD_CXX_FLAGS += -DCARLA_BACKEND_NAMESPACE=Ildaeil
-BUILD_CXX_FLAGS += -DREAL_BUILD
+BUILD_CXX_FLAGS += -DCARLA_BACKEND_NAMESPACE=$(CARLA_BACKEND_NAMESPACE)
 BUILD_CXX_FLAGS += -DSTATIC_PLUGIN_TARGET
+
+BUILD_CXX_FLAGS += -DREAL_BUILD
 BUILD_CXX_FLAGS += -I../../carla/source/backend
 BUILD_CXX_FLAGS += -I../../carla/source/includes
 BUILD_CXX_FLAGS += -I../../carla/source/modules
@@ -95,28 +84,28 @@ $(BUILD_DIR)/../Common/PluginHostWindow.cpp.o: BUILD_CXX_FLAGS += -ObjC++
 $(BUILD_DIR)/../Common/SizeUtils.cpp.o: BUILD_CXX_FLAGS += -ObjC++
 endif
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # Enable all possible plugin types
 
-ifeq ($(WASM),true)
-
-TARGETS_EXTRA = jack
-
-else
-
+# base plugin formats to build
 TARGETS_BASE = lv2 vst2 clap
-TARGETS_EXTRA = jack carlabins
 
 # VST3 does not do MIDI filter plugins, by design
 ifneq ($(NAME),Ildaeil-MIDI)
 TARGETS_BASE += vst3
 endif
 
+# add standalone and carlabins, depending on target system
+ifeq ($(WASM),true)
+TARGETS_BASE =
+TARGETS_EXTRA = jack
+else
+TARGETS_EXTRA = jack carlabins
 endif
 
 all: $(TARGETS_BASE) $(TARGETS_EXTRA)
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # special step for carla binaries
 
 ifneq ($(USE_SYSTEM_CARLA_BINS),true)
@@ -162,4 +151,4 @@ carlabins:
 
 endif # USE_SYSTEM_CARLA_BINS
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
