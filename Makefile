@@ -50,14 +50,14 @@ CARLA_TARGETS += bridges-plugin bridges-ui
 
 ifeq ($(CARLA_EXTRA_TARGETS),true)
 
-# 32bit bridge
+# native 32bit bridge
 ifeq ($(WINDOWS)$(CPU_X86_64),truetrue)
 CARLA_TARGETS += win32
-else ifneq ($(MACOS),true)
+else ifneq ($(MACOS)$(WINDOWS),true)
 CARLA_TARGETS += posix32
 endif
 
-# native wine bridge
+# wine bridges
 ifeq ($(LINUX)$(CPU_X86_64),truetrue)
 CARLA_TARGETS += wine32 wine64
 else ifeq ($(LINUX)$(CPU_I386),truetrue)
