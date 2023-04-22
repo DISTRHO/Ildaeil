@@ -31,6 +31,7 @@ endif
 CARLA_EXTRA_ARGS = CARLA_BACKEND_NAMESPACE=Ildaeil \
 	CAN_GENERATE_LV2_TTL=false \
 	CUSTOM_DPF_PATH=$(CURDIR)/dpf \
+	DGL_NAMESPACE=IldaeilDGL \
 	STATIC_PLUGIN_TARGET=true \
 	USING_CUSTOM_DPF=true \
 	HAVE_FFMPEG=false \
@@ -66,6 +67,13 @@ endif
 
 endif # CARLA_EXTRA_TARGETS
 endif # USE_SYSTEM_CARLA_BINS
+
+# --------------------------------------------------------------
+# DGL config
+
+DGL_EXTRA_ARGS = \
+	DISTRHO_NAMESPACE=IldaeilDISTRHO \
+	DGL_NAMESPACE=IldaeilDGL
 
 # ---------------------------------------------------------------------------------------------------------------------
 # DPF bundled plugins
@@ -105,10 +113,10 @@ carla: dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
 
 extra-bins:
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/FX
 ifneq ($(WASM),true)
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) carlabins -C plugins/MIDI
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) carlabins -C plugins/Synth
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) carlabins -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) carlabins -C plugins/Synth
 endif
 
 extra-posix32:
@@ -127,7 +135,7 @@ extra-wine64:
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla wine64
 
 dgl:
-	$(MAKE) -C dpf/dgl opengl
+	$(MAKE) $(DGL_EXTRA_ARGS) -C dpf/dgl opengl
 
 plugins: carla dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) all -C plugins/FX

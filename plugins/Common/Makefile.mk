@@ -10,6 +10,10 @@ ifneq ($(CARLA_BACKEND_NAMESPACE),Ildaeil)
 $(error wrong build setup)
 endif
 
+ifneq ($(DGL_NAMESPACE),IldaeilDGL)
+$(error wrong build setup)
+endif
+
 ifneq ($(STATIC_PLUGIN_TARGET),true)
 $(error wrong build setup)
 endif
