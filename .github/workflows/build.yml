@@ -94,7 +94,7 @@ jobs:
         if: ${{ matrix.target == 'x86_64' }}
         run: |
           sudo apt-get install -yqq libwine-dev:i386
-          pushd PawPaw; source local.env linux-${{ matrix.target }}; popd
+          pushd PawPaw; source local.env linux; popd
           make NOOPT=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
       - name: Set sha8
