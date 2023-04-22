@@ -1,7 +1,6 @@
 name: build
 
-on:
-  push:
+on: [push, pull_request]
 
 env:
   CACHE_VERSION: 6
@@ -11,7 +10,10 @@ env:
   WITH_LTO: false
 
 jobs:
-  linux-arm64:
+  linux:
+    strategy:
+      matrix:
+        target: [aarch64, armhf, i386, riscv64, x86_64]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -22,7 +24,7 @@ jobs:
         with:
           path: |
             ~/PawPawBuilds
-          key: linux-arm64-v${{ env.CACHE_VERSION }}
+          key: linux-${{ matrix.target }}-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -30,6 +32,7 @@ jobs:
           sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
           sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
+        if: ${{ matrix.target == 'aarch64' }}
         run: |
           sudo dpkg --add-architecture arm64
           sudo sed -i "s/deb http/deb [arch=amd64] http/" /etc/apt/sources.list
@@ -38,43 +41,8 @@ jobs:
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-aarch64-linux-gnu libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 gperf qemu-user-static
-      - name: Build extra dependencies
-        run: |
-          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh linux-aarch64
-      - name: Build linux arm64 cross-compiled
-        run: |
-          pushd PawPaw; source local.env linux-aarch64; popd
-          make features
-          make NOOPT=true -j $(nproc)
-      - name: Set sha8
-        id: slug
-        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-linux-arm64-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
-          path: |
-            bin/*
-
-  linux-armhf:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/PawPawBuilds
-          key: linux-armhf-v${{ env.CACHE_VERSION }}
-      - name: Fix GitHub's mess
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
+        if: ${{ matrix.target == 'armhf' }}
         run: |
           sudo dpkg --add-architecture armhf
           sudo sed -i "s/deb http/deb [arch=amd64] http/" /etc/apt/sources.list
@@ -83,85 +51,15 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-arm-linux-gnueabihf libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf gperf qemu-user-static
-      - name: Build extra dependencies
-        run: |
-          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh linux-armhf
-      - name: Build linux armhf cross-compiled
-        run: |
-          pushd PawPaw; source local.env linux-armhf; popd
-          make features
-          make NOOPT=true -j $(nproc)
-      - name: Set sha8
-        id: slug
-        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-linux-armhf-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
-          path: |
-            bin/*
-
-  linux-i686:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/PawPawBuilds
-          key: linux-i686-v${{ env.CACHE_VERSION }}
-      - name: Fix GitHub's mess
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
+        if: ${{ matrix.target == 'i386' }}
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-i686-linux-gnu libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386 gperf
           sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64 libwine-dev:i386 wine-stable wine64-tools
-      - name: Build extra dependencies
-        run: |
-          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh linux-i686
-      - name: Build linux i686
-        run: |
-          pushd PawPaw; source local.env linux-i686; popd
-          make features
-          make NOOPT=true -j $(nproc)
-      - name: Set sha8
-        id: slug
-        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-linux-i686-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
-          path: |
-            bin/*
-
-  linux-riscv64:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/PawPawBuilds
-          key: linux-riscv64-v${{ env.CACHE_VERSION }}
-      - name: Fix GitHub's mess
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
+        if: ${{ matrix.target == 'riscv64' }}
         run: |
           sudo dpkg --add-architecture riscv64
           sudo sed -i "s/deb http/deb [arch=amd64] http/" /etc/apt/sources.list
@@ -170,43 +68,8 @@ jobs:
           echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-riscv64.list
           sudo apt-get update -qq
           sudo apt-get install -yqq g++-riscv64-linux-gnu libasound2-dev:riscv64 libdbus-1-dev:riscv64 libgl1-mesa-dev:riscv64 libglapi-mesa:riscv64 libglvnd0:riscv64 libglib2.0-dev:riscv64 libx11-dev:riscv64 libxcursor-dev:riscv64 libxext-dev:riscv64 libxrandr-dev:riscv64 gperf qemu-user-static
-      - name: Build extra dependencies
-        run: |
-          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh linux-riscv64
-      - name: Build linux riscv64
-        run: |
-          pushd PawPaw; source local.env linux-riscv64; popd
-          make features
-          make NOOPT=true -j $(nproc)
-      - name: Set sha8
-        id: slug
-        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-linux-riscv64-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
-          path: |
-            bin/*
-
-  linux-x86_64:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/PawPawBuilds
-          key: linux-x86_64-v${{ env.CACHE_VERSION }}
-      - name: Fix GitHub's mess
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies
+        if: ${{ matrix.target == 'x86_64' }}
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
@@ -216,16 +79,18 @@ jobs:
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh linux
-      - name: Build linux x86_64
+          ./PawPaw/bootstrap-cardinal.sh linux-${{ matrix.target }}
+      - name: Build linux
         run: |
-          pushd PawPaw; source local.env linux; popd
+          pushd PawPaw; source local.env linux-${{ matrix.target }}; popd
           make features
-          make NOOPT=true all extra-posix32 extra-win32 extra-win64 extra-wine64 -j $(nproc)
+          make NOOPT=true -j $(nproc)
       - name: Build linux x86_64 extra
+        if: ${{ matrix.target == 'x86_64' }}
         run: |
+          pushd PawPaw; source local.env linux-${{ matrix.target }}; popd
+          make NOOPT=true extra-posix32 extra-win32 extra-win64 extra-wine64 -j $(nproc)
           sudo apt-get install libwine-dev:i386
-          pushd PawPaw; source local.env linux; popd
           make NOOPT=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
       - name: Set sha8
@@ -233,7 +98,7 @@ jobs:
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.repository.name }}-linux-x86_64-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
+          name: ${{ github.event.repository.name }}-linux-${{ matrix.target }}-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             bin/*
 
@@ -274,7 +139,10 @@ jobs:
             !bin/vst2
             !bin/vst3
 
-  win32:
+  windows:
+    strategy:
+      matrix:
+        target: [win32, win64]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -285,7 +153,7 @@ jobs:
         with:
           path: |
             ~/PawPawBuilds
-          key: win32-v${{ env.CACHE_VERSION }}
+          key: ${{ matrix.target }}-v${{ env.CACHE_VERSION }}
       - name: Fix GitHub's mess
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -293,49 +161,13 @@ jobs:
           sudo apt-get install -yqq --allow-downgrades libgd3/jammy
           sudo apt-get purge -yqq libmono* moby* mono* msbuild* php* libgdiplus libpcre2-posix3 nuget
       - name: Set up dependencies
+        if: ${{ matrix.target == 'win32' }}
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 gperf mingw-w64 wine-stable
-      - name: Build extra dependencies
-        run: |
-          git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh win32
-      - name: Build win32 cross-compiled
-        run: |
-          pushd PawPaw; source local.env win32; popd
-          make features
-          make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
-      - name: Set sha8
-        id: slug
-        run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}-win32-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
-          path: |
-            bin/*
-            !bin/*-ladspa.dll
-            !bin/*-dssi.dll
-
-  win64:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/PawPawBuilds
-          key: win64-v${{ env.CACHE_VERSION }}
-      - name: Fix GitHub's mess
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update -qq
-          sudo apt-get install -yqq --allow-downgrades libgd3/jammy
-          sudo apt-get purge -yqq libmono* moby* mono* msbuild* php* libgdiplus libpcre2-posix3 nuget
       - name: Set up dependencies
+        if: ${{ matrix.target == 'win64' }}
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
@@ -343,10 +175,10 @@ jobs:
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh win64
-      - name: Build win64 cross-compiled
+          ./PawPaw/bootstrap-cardinal.sh ${{ matrix.target }}
+      - name: Build cross-compiled
         run: |
-          pushd PawPaw; source local.env win64; popd
+          pushd PawPaw; source local.env ${{ matrix.target }}; popd
           make features
           make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
       - name: Set sha8
@@ -354,7 +186,7 @@ jobs:
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.repository.name }}-win64-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
+          name: ${{ github.event.repository.name }}-${{ matrix.target }}-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             bin/*
             !bin/*-ladspa.dll
