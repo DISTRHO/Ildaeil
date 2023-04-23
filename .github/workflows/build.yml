@@ -82,19 +82,19 @@ jobs:
           ./PawPaw/bootstrap-cardinal.sh linux-${{ matrix.target }}
       - name: Build linux
         run: |
-          pushd PawPaw; source local.env linux-${{ matrix.target }}; popd
+          source PawPaw/local.env linux-${{ matrix.target }}
           make features
           make NOOPT=true -j $(nproc)
       - name: Build linux x86_64 extra (part1)
         if: ${{ matrix.target == 'x86_64' }}
         run: |
-          pushd PawPaw; source local.env linux-${{ matrix.target }}; popd
+          source PawPaw/local.env linux-${{ matrix.target }}
           make NOOPT=true all extra-posix32 extra-win32 extra-win64 extra-wine64 -j $(nproc)
       - name: Build linux x86_64 extra (part2)
         if: ${{ matrix.target == 'x86_64' }}
         run: |
           sudo apt-get install -yqq libwine-dev:i386
-          pushd PawPaw; source local.env linux; popd
+          source PawPaw/local.env linux
           make NOOPT=true extra-wine32 -j $(nproc)
           make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
       - name: Set sha8
@@ -106,7 +106,10 @@ jobs:
           path: |
             bin/*
 
-  macos-universal:
+  macos:
+    strategy:
+      matrix:
+        target: [intel, universal]
     runs-on: macos-11
     steps:
       - uses: actions/checkout@v3
@@ -117,14 +120,14 @@ jobs:
         with:
           path: |
             ~/PawPawBuilds
-          key: macos-universal-v${{ env.CACHE_VERSION }}
+          key: macos-${{ matrix.target }}-v${{ env.CACHE_VERSION }}
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
-          ./PawPaw/bootstrap-cardinal.sh macos-universal
-      - name: Build macOS universal
+          ./PawPaw/bootstrap-cardinal.sh macos-${{ matrix.target }}
+      - name: Build macOS
         run: |
-          pushd PawPaw; source local.env macos-universal; popd
+          source PawPaw/local.env macos-${{ matrix.target }}
           make features
           make NOOPT=true -j $(sysctl -n hw.logicalcpu)
           ./dpf/utils/package-osx-bundles.sh
@@ -133,12 +136,13 @@ jobs:
         run: echo "::set-output name=sha8::$(echo ${{ github.sha }} | cut -c1-8)"
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.repository.name }}-macOS-universal-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
+          name: ${{ github.event.repository.name }}-macOS-${{ matrix.target }}-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             *-macOS.pkg
             bin/*
             !bin/*-ladspa.dylib
             !bin/*-dssi.dylib
+            !bin/clap
             !bin/lv2
             !bin/vst2
             !bin/vst3
@@ -182,7 +186,7 @@ jobs:
           ./PawPaw/bootstrap-cardinal.sh ${{ matrix.target }}
       - name: Build cross-compiled
         run: |
-          pushd PawPaw; source local.env ${{ matrix.target }}; popd
+          source PawPaw/local.env ${{ matrix.target }}
           make features
           make CARLA_EXTRA_TARGETS=true NOOPT=true -j $(nproc)
       - name: Set sha8
