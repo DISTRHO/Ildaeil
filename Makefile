@@ -51,24 +51,25 @@ CARLA_TARGETS += bridges-plugin bridges-ui
 
 ifeq ($(CARLA_EXTRA_TARGETS),true)
 
-# native 32bit bridge
+# 32bit bridge
 ifeq ($(WINDOWS)$(CPU_X86_64),truetrue)
 CARLA_TARGETS += win32
 else ifneq ($(MACOS)$(WINDOWS),true)
 CARLA_TARGETS += posix32
 endif
 
-# wine bridges
-ifeq ($(LINUX)$(CPU_X86_64),truetrue)
-CARLA_TARGETS += wine32 wine64
-else ifeq ($(LINUX)$(CPU_I386),truetrue)
+# Windows bridges
+ifeq ($(CPU_I386_OR_X86_64)$(LINUX),truetrue)
 CARLA_TARGETS += wine32
+endif
+ifeq ($(CPU_X86_64)$(LINUX),truetrue)
+CARLA_TARGETS += wine64
 endif
 
 endif # CARLA_EXTRA_TARGETS
 endif # USE_SYSTEM_CARLA_BINS
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------
 # DGL config
 
 DGL_EXTRA_ARGS = \
@@ -113,8 +114,9 @@ carla: dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla $(CARLA_TARGETS)
 
 extra-bins:
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/Standalone
 ifneq ($(WASM),true)
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) carlabins -C plugins/FX
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) carlabins -C plugins/MIDI
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) carlabins -C plugins/Synth
 endif
@@ -138,10 +140,11 @@ dgl:
 	$(MAKE) $(DGL_EXTRA_ARGS) -C dpf/dgl opengl
 
 plugins: carla dgl
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) all -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
 ifneq ($(WASM),true)
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) all -C plugins/MIDI
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) all -C plugins/Synth
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) -C plugins/Synth
 endif
 
 ifneq ($(CROSS_COMPILING),true)
@@ -157,6 +160,7 @@ endif
 # ---------------------------------------------------------------------------------------------------------------------
 
 install:
+	install -d $(DESTDIR)$(PREFIX)/bin
 	install -d $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap
 	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2
 	install -d $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2
@@ -165,23 +169,20 @@ install:
 	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/$(VST3_BINARY_DIR)
 	install -d $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/$(VST3_BINARY_DIR)
 
+	install -m 755 bin/Ildaeil$(APP_EXT)   $(DESTDIR)$(PREFIX)/bin/
+	install -m 644 bin/Ildaeil.clap/*      $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap/
 	install -m 644 bin/Ildaeil-FX.lv2/*    $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-FX.lv2/
 	install -m 644 bin/Ildaeil-MIDI.lv2/*  $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-MIDI.lv2/
 	install -m 644 bin/Ildaeil-Synth.lv2/* $(DESTDIR)$(PREFIX)/lib/lv2/Ildaeil-Synth.lv2/
-
+	install -m 644 bin/Ildaeil.vst/*       $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil.vst/
 	install -m 644 bin/Ildaeil-FX.vst3/$(VST3_BINARY_DIR)/*    $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-FX.vst3/$(VST3_BINARY_DIR)/
 	install -m 644 bin/Ildaeil-Synth.vst3/$(VST3_BINARY_DIR)/* $(DESTDIR)$(PREFIX)/lib/vst3/Ildaeil-Synth.vst3/$(VST3_BINARY_DIR)/
-
-ifeq ($(MACOS),true)
-else
-	install -m 644 bin/Ildaeil.clap/*      $(DESTDIR)$(PREFIX)/lib/clap/Ildaeil.clap/
-	install -m 644 bin/Ildaeil.vst/*       $(DESTDIR)$(PREFIX)/lib/vst/Ildaeil.vst/
-endif
 
 # ---------------------------------------------------------------------------------------------------------------------
 
 clean:
 	$(MAKE) $(CARLA_EXTRA_ARGS) distclean -C carla
+	$(MAKE) $(CARLA_EXTRA_ARGS) clean -C plugins/Standalone
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) clean -C plugins/FX
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) clean -C plugins/MIDI
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) clean -C plugins/Synth

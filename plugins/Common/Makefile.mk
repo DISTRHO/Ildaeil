@@ -112,20 +112,21 @@ endif
 # ---------------------------------------------------------------------------------------------------------------------
 # Enable all possible plugin types
 
-# base plugin formats to build
+ifeq ($(STANDALONE),true)
+
+TARGETS_BASE =
+TARGETS_EXTRA = jack
+
+else
+
 TARGETS_BASE = lv2 vst2 clap
+TARGETS_EXTRA = jack carlabins
 
 # VST3 does not do MIDI filter plugins, by design
 ifneq ($(NAME),Ildaeil-MIDI)
 TARGETS_BASE += vst3
 endif
 
-# add standalone and carlabins, depending on target system
-ifeq ($(WASM),true)
-TARGETS_BASE =
-TARGETS_EXTRA = jack
-else
-TARGETS_EXTRA = jack carlabins
 endif
 
 all: $(TARGETS_BASE) $(TARGETS_EXTRA)
@@ -142,22 +143,20 @@ CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
 ifeq ($(CARLA_EXTRA_TARGETS),true)
 
 # 32bit bridge
-ifeq ($(CPU_X86_64),true)
-ifeq ($(WINDOWS),true)
+ifeq ($(WINDOWS)$(CPU_X86_64),truetrue)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-win32$(APP_EXT)
-else ifneq ($(MACOS),true)
+else ifneq ($(MACOS)$(WINDOWS),true)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-posix32$(APP_EXT)
-endif
 endif
 
 # Windows bridges
 ifeq ($(CPU_I386_OR_X86_64)$(LINUX),truetrue)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-win32.exe
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/jackbridge-wine32.dll
-ifeq ($(CPU_X86_64),true)
+endif
+ifeq ($(CPU_X86_64)$(LINUX),truetrue)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-win64.exe
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/jackbridge-wine64.dll
-endif
 endif
 
 endif # CARLA_EXTRA_TARGETS

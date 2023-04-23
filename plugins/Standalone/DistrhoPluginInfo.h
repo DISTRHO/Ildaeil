@@ -19,17 +19,13 @@
 #define DISTRHO_PLUGIN_INFO_H_INCLUDED
 
 #define DISTRHO_PLUGIN_BRAND   "DISTRHO"
-#define DISTRHO_PLUGIN_NAME    "Ildaeil-MIDI"
-#define DISTRHO_PLUGIN_URI     "https://distrho.kx.studio/plugins/ildaeil#midi"
-#define DISTRHO_PLUGIN_CLAP_ID "studio.kx.distrho.ildaeil#midi"
-
-#define DISTRHO_PLUGIN_CLAP_FEATURES "note-effect"
-#define DISTRHO_PLUGIN_LV2_CATEGORY  "lv2:MIDIPlugin"
+#define DISTRHO_PLUGIN_NAME    "Ildaeil"
+#define DISTRHO_PLUGIN_URI     "https://distrho.kx.studio/plugins/ildaeil"
 
 #define DISTRHO_PLUGIN_HAS_UI             1
 #define DISTRHO_PLUGIN_IS_SYNTH           0
-#define DISTRHO_PLUGIN_NUM_INPUTS         0
-#define DISTRHO_PLUGIN_NUM_OUTPUTS        0
+#define DISTRHO_PLUGIN_NUM_INPUTS         2
+#define DISTRHO_PLUGIN_NUM_OUTPUTS        2
 #define DISTRHO_PLUGIN_WANT_LATENCY       1
 #define DISTRHO_PLUGIN_WANT_STATE         1
 #define DISTRHO_PLUGIN_WANT_FULL_STATE    1
@@ -38,15 +34,15 @@
 #define DISTRHO_PLUGIN_WANT_TIMEPOS       1
 #define DISTRHO_PLUGIN_WANT_DIRECT_ACCESS 1
 #define DISTRHO_UI_USE_CUSTOM             1
-#define DISTRHO_UI_USER_RESIZABLE         0
+#define DISTRHO_UI_USER_RESIZABLE         1
 #define DISTRHO_UI_CUSTOM_INCLUDE_PATH    "DearImGui.hpp"
 #define DISTRHO_UI_CUSTOM_WIDGET_TYPE     DGL_NAMESPACE::ImGuiTopLevelWidget
 #define DISTRHO_UI_DEFAULT_WIDTH          kInitialWidth
 #define DISTRHO_UI_DEFAULT_HEIGHT         kInitialHeight
 
-#define ILDAEIL_STANDALONE 0
+#define ILDAEIL_STANDALONE 1
 
-static constexpr const uint kInitialWidth  = 520;
-static constexpr const uint kInitialHeight = 520;
+static constexpr const uint kInitialWidth  = 640;
+static constexpr const uint kInitialHeight = 480;
 
 #endif // DISTRHO_PLUGIN_INFO_H_INCLUDED

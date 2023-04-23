@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2023 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,6 +17,10 @@
 
 #include "IldaeilBasePlugin.hpp"
 #include "DistrhoUI.hpp"
+
+#if ILDAEIL_STANDALONE
+#include "DistrhoStandaloneUtils.hpp"
+#endif
 
 #include "CarlaBackendUtils.hpp"
 #include "PluginHostWindow.hpp"
@@ -55,12 +59,6 @@ class IldaeilUI : public UI,
                   public Runner,
                   public PluginHostWindow::Callbacks
 {
-    static constexpr const uint kInitialWidth  = 520;
-   #ifdef DISTRHO_OS_WASM
-    static constexpr const uint kInitialHeight = 350;
-   #else
-    static constexpr const uint kInitialHeight = 520;
-   #endif
     static constexpr const uint kGenericWidth  = 380;
     static constexpr const uint kGenericHeight = 400;
     static constexpr const uint kButtonHeight  = 20;
@@ -229,19 +227,19 @@ public:
         ImGuiStyle& style(ImGui::GetStyle());
         style.FrameRounding = 4;
 
-        const double padding = style.WindowPadding.y * 2;
+        const double paddingY = style.WindowPadding.y * 2;
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
-            fPluginHostWindow.setPositionAndSize(0, kButtonHeight * scaleFactor + padding,
+            fPluginHostWindow.setPositionAndSize(0, kButtonHeight * scaleFactor + paddingY,
                                                  kInitialWidth * scaleFactor,
-                                                 (kInitialHeight - kButtonHeight) * scaleFactor - padding);
+                                                 (kInitialHeight - kButtonHeight) * scaleFactor - paddingY);
         }
         else
         {
-            fPluginHostWindow.setPositionAndSize(0, kButtonHeight + padding,
-                                                 kInitialWidth, kInitialHeight - kButtonHeight - padding);
+            fPluginHostWindow.setPositionAndSize(0, kButtonHeight + paddingY,
+                                                 kInitialWidth, kInitialHeight - kButtonHeight - paddingY);
         }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
@@ -325,7 +323,6 @@ public:
            #endif
             fPluginHasFileOpen = false;
         }
-
     }
 
     void projectLoadedFromDSP()
@@ -423,10 +420,10 @@ public:
         else
             updatePluginGenericUI(handle);
 
-       #ifndef DISTRHO_OS_WASM
-        ImGuiStyle& style(ImGui::GetStyle());
+       #if !ILDAEIL_STANDALONE
         const double scaleFactor = getScaleFactor();
-        fNextSize = Size<uint>(kGenericWidth * scaleFactor, (kGenericHeight + style.FramePadding.x) * scaleFactor);
+        fNextSize = Size<uint>(kGenericWidth * scaleFactor,
+                               (kGenericHeight + ImGui::GetStyle().WindowPadding.y) * scaleFactor);
        #endif
     }
 
@@ -815,7 +812,7 @@ protected:
             if (info->cvIns != 0 || info->cvOuts != 0)
                 break;
 
-           #ifdef DISTRHO_OS_WASM
+           #if ILDAEIL_STANDALONE
             if (info->midiIns != 0 && info->midiIns != 1)
                 break;
             if (info->midiOuts != 0 && info->midiOuts != 1)
@@ -852,7 +849,7 @@ protected:
 
             if (fPluginType == PLUGIN_INTERNAL)
             {
-               #ifndef DISTRHO_OS_WASM
+               #if !ILDAEIL_STANDALONE
                 if (std::strcmp(info->label, "audiogain_s") == 0)
                     break;
                #endif
@@ -951,10 +948,11 @@ protected:
 
     void drawTopBar()
     {
+        const double scaleFactor = getScaleFactor();
         const float padding = ImGui::GetStyle().WindowPadding.y * 2;
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(getWidth(), kButtonHeight * getScaleFactor() + padding));
+        ImGui::SetNextWindowSize(ImVec2(getWidth(), kButtonHeight * scaleFactor + padding));
 
         const int flags = ImGuiWindowFlags_NoSavedSettings
                         | ImGuiWindowFlags_NoTitleBar
@@ -969,9 +967,7 @@ protected:
             {
                 fIdleState = kIdleHidePluginUI;
                 fDrawingState = kDrawingPluginList;
-
-               #ifndef DISTRHO_OS_WASM
-                const double scaleFactor = getScaleFactor();
+               #if !ILDAEIL_STANDALONE
                 fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
                #endif
             }
@@ -1024,6 +1020,22 @@ protected:
                 if (ImGui::Button("Show Generic GUI"))
                     fIdleState = kIdleHideEmbedAndShowGenericUI;
             }
+
+           #if ILDAEIL_STANDALONE
+            if (isUsingNativeAudio())
+            {
+                ImGui::SameLine();
+                ImGui::Spacing();
+
+                ImGui::SameLine();
+                if (supportsAudioInput() && !isAudioInputEnabled() && ImGui::Button("Enable Input"))
+                    requestAudioInput();
+
+                ImGui::SameLine();
+                if (supportsMIDI() && !isMIDIEnabled() && ImGui::Button("Enable MIDI"))
+                    requestMIDI();
+            }
+           #endif
         }
 
         ImGui::End();
@@ -1123,7 +1135,10 @@ protected:
     {
         setupMainWindowPos();
 
-        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
+        constexpr const int plflags = ImGuiWindowFlags_NoSavedSettings
+                                    | ImGuiWindowFlags_NoDecoration;
+
+        if (ImGui::Begin("Plugin List", nullptr, plflags))
             ImGui::TextUnformatted("Loading...", nullptr);
 
         ImGui::End();
@@ -1140,16 +1155,19 @@ protected:
 
         setupMainWindowPos();
 
-        if (ImGui::Begin("Plugin List", nullptr, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize))
-        {
-            const int pflags = ImGuiWindowFlags_NoSavedSettings
-                             | ImGuiWindowFlags_NoResize
-                             | ImGuiWindowFlags_NoCollapse
-                             | ImGuiWindowFlags_NoScrollbar
-                             | ImGuiWindowFlags_NoScrollWithMouse
-                             | ImGuiWindowFlags_AlwaysAutoResize;
+        constexpr const int plflags = ImGuiWindowFlags_NoSavedSettings
+                                    | ImGuiWindowFlags_NoDecoration;
 
-            if (ImGui::BeginPopupModal("Plugin Error", nullptr, pflags))
+        if (ImGui::Begin("Plugin List", nullptr, plflags))
+        {
+            constexpr const int errflags = ImGuiWindowFlags_NoSavedSettings
+                                         | ImGuiWindowFlags_NoResize
+                                         | ImGuiWindowFlags_AlwaysAutoResize
+                                         | ImGuiWindowFlags_NoCollapse
+                                         | ImGuiWindowFlags_NoScrollbar
+                                         | ImGuiWindowFlags_NoScrollWithMouse;
+
+            if (ImGui::BeginPopupModal("Plugin Error", nullptr, errflags))
             {
                 ImGui::TextWrapped("Failed to load plugin, error was:\n%s", fPopupError.buffer());
 

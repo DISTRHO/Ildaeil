@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2023 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -42,5 +42,12 @@
 #define DISTRHO_UI_USER_RESIZABLE         0
 #define DISTRHO_UI_CUSTOM_INCLUDE_PATH    "DearImGui.hpp"
 #define DISTRHO_UI_CUSTOM_WIDGET_TYPE     DGL_NAMESPACE::ImGuiTopLevelWidget
+#define DISTRHO_UI_DEFAULT_WIDTH          kInitialWidth
+#define DISTRHO_UI_DEFAULT_HEIGHT         kInitialHeight
+
+#define ILDAEIL_STANDALONE 0
+
+static constexpr const uint kInitialWidth  = 520;
+static constexpr const uint kInitialHeight = 520;
 
 #endif // DISTRHO_PLUGIN_INFO_H_INCLUDED
