@@ -1085,6 +1085,52 @@ protected:
                 ImGui::SameLine();
                 if (supportsMIDI() && !isMIDIEnabled() && ImGui::Button("Enable MIDI"))
                     requestMIDI();
+
+                if (supportsBufferSizeChanges())
+                {
+                    ImGui::SameLine();
+                    ImGui::Spacing();
+
+                    ImGui::SameLine();
+                    ImGui::Text("Buffer Size:");
+
+                    static constexpr uint bufferSizes_i[] = {
+                       #ifndef DISTRHO_OS_WASM
+                        128,
+                       #endif
+                        256, 512, 1024, 2048, 4096, 8192,
+                       #ifdef DISTRHO_OS_WASM
+                        16384,
+                       #endif
+                    };
+                    static constexpr const char* bufferSizes_s[] = {
+                       #ifndef DISTRHO_OS_WASM
+                        "128",
+                       #endif
+                        "256", "512", "1024", "2048", "4096", "8192",
+                       #ifdef DISTRHO_OS_WASM
+                        "16384",
+                       #endif
+                    };
+                    uint buffersize = getBufferSize();
+                    int current = -1;
+                    for (uint i=0; i<ARRAY_SIZE(bufferSizes_i); ++i)
+                    {
+                        if (bufferSizes_i[i] == buffersize)
+                        {
+                            current = i;
+                            break;
+                        }
+                    }
+
+                    ImGui::SameLine();
+                    if (ImGui::Combo("##buffersize", &current, bufferSizes_s, ARRAY_SIZE(bufferSizes_s)))
+                    {
+                        const uint next = bufferSizes_i[current];
+                        d_stdout("requesting new buffer size: %u -> %u", buffersize, next);
+                        requestBufferSizeChange(next);
+                    }
+                }
             }
            #endif
         }

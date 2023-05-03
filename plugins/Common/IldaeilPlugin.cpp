@@ -81,12 +81,14 @@ const char* IldaeilBasePlugin::getPathForJSFX()
 
 class IldaeilPlugin : public IldaeilBasePlugin
 {
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
-    static constexpr const uint kMaxMidiEventCount = 512;
-    NativeMidiEvent* fMidiEvents;
+   #if DISTRHO_PLUGIN_NUM_INPUTS == 0 || DISTRHO_PLUGIN_NUM_OUTPUTS == 0
     float* fDummyBuffer;
     float* fDummyBuffers[2];
-#endif
+   #endif
+   #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+    static constexpr const uint kMaxMidiEventCount = 512;
+    NativeMidiEvent* fMidiEvents;
+   #endif
 
     mutable NativeTimeInfo fCarlaTimeInfo;
     mutable water::MemoryOutputStream fLastProjectState;
@@ -95,10 +97,12 @@ class IldaeilPlugin : public IldaeilBasePlugin
 public:
     IldaeilPlugin()
         : IldaeilBasePlugin(),
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
-          fMidiEvents(nullptr),
+         #if DISTRHO_PLUGIN_NUM_INPUTS == 0 || DISTRHO_PLUGIN_NUM_OUTPUTS == 0
           fDummyBuffer(nullptr),
-#endif
+         #endif
+         #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+          fMidiEvents(nullptr),
+         #endif
           fLastLatencyValue(0)
     {
         fCarlaPluginDescriptor = carla_get_native_rack_plugin();
@@ -165,11 +169,14 @@ public:
         fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_HOST_USES_EMBED,
                                            0, 0, nullptr, 0.0f);
 
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+       #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
         fMidiEvents = new NativeMidiEvent[kMaxMidiEventCount];
+       #endif
+
+       #if DISTRHO_PLUGIN_NUM_INPUTS == 0 || DISTRHO_PLUGIN_NUM_OUTPUTS == 0
         // create dummy buffers
         bufferSizeChanged(getBufferSize());
-#endif
+       #endif
     }
 
     ~IldaeilPlugin() override
@@ -177,10 +184,12 @@ public:
         if (fCarlaHostHandle != nullptr)
         {
             carla_host_handle_free(fCarlaHostHandle);
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
-            delete[] fMidiEvents;
+           #if DISTRHO_PLUGIN_NUM_INPUTS == 0 || DISTRHO_PLUGIN_NUM_OUTPUTS == 0
             delete[] fDummyBuffer;
-#endif
+           #endif
+           #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+            delete[] fMidiEvents;
+           #endif
         }
 
         if (fCarlaPluginHandle != nullptr)
@@ -438,7 +447,7 @@ protected:
            #if DISTRHO_PLUGIN_NUM_INPUTS == 0
             inputs = fDummyBuffers;
            #endif
-           #if DISTRHO_PLUGIN_NUM_INPUTS == 0
+           #if DISTRHO_PLUGIN_NUM_OUTPUTS == 0
             outputs = fDummyBuffers;
            #endif
 
@@ -456,13 +465,14 @@ protected:
 
     void bufferSizeChanged(const uint32_t newBufferSize) override
     {
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+       #if DISTRHO_PLUGIN_NUM_INPUTS == 0 || DISTRHO_PLUGIN_NUM_OUTPUTS == 0
         delete[] fDummyBuffer;
         fDummyBuffer = new float[newBufferSize];
         fDummyBuffers[0] = fDummyBuffer;
         fDummyBuffers[1] = fDummyBuffer;
         std::memset(fDummyBuffer, 0, sizeof(float)*newBufferSize);
-#endif
+       #endif
+
         if (fCarlaPluginHandle != nullptr)
             fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_BUFFER_SIZE_CHANGED,
                                                0, newBufferSize, nullptr, 0.0f);
