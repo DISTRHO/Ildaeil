@@ -261,7 +261,9 @@ protected:
 
     const char* getLabel() const override
     {
-#if DISTRHO_PLUGIN_IS_SYNTH
+#if ILDAEIL_STANDALONE
+        return "Ildaeil";
+#elif DISTRHO_PLUGIN_IS_SYNTH
         return "IldaeilSynth";
 #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
         return "IldaeilMIDI";
@@ -297,7 +299,9 @@ protected:
 
     int64_t getUniqueId() const override
     {
-#if DISTRHO_PLUGIN_IS_SYNTH
+#if ILDAEIL_STANDALONE
+        return d_cconst('d', 'I', 'l', 'd');
+#elif DISTRHO_PLUGIN_IS_SYNTH
         return d_cconst('d', 'I', 'l', 'S');
 #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
         return d_cconst('d', 'I', 'l', 'M');
@@ -408,7 +412,7 @@ protected:
     {
         if (fCarlaPluginHandle != nullptr)
         {
-#if DISTRHO_PLUGIN_WANT_MIDI_INPUT
+           #if DISTRHO_PLUGIN_WANT_MIDI_INPUT
             uint32_t midiEventCount = 0;
             for (uint32_t i=0; i < dpfMidiEventCount; ++i)
             {
@@ -426,20 +430,20 @@ protected:
                 if (++midiEventCount == kMaxMidiEventCount)
                     break;
             }
-# if DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-            fCarlaPluginDescriptor->process(fCarlaPluginHandle, fDummyBuffers, fDummyBuffers, frames,
+           #else
+            static constexpr const* NativeMidiEvent fMidiEvents = nullptr;
+            static constexpr const uint32_t midiEventCount = 0;
+           #endif
+
+           #if DISTRHO_PLUGIN_NUM_INPUTS == 0
+            inputs = fDummyBuffers;
+           #endif
+           #if DISTRHO_PLUGIN_NUM_INPUTS == 0
+            outputs = fDummyBuffers;
+           #endif
+
+            fCarlaPluginDescriptor->process(fCarlaPluginHandle, (float**)inputs, outputs, frames,
                                             fMidiEvents, midiEventCount);
-            // unused
-            (void)outputs;
-# else
-            fCarlaPluginDescriptor->process(fCarlaPluginHandle, fDummyBuffers, outputs, frames,
-                                            fMidiEvents, midiEventCount);
-# endif
-            // unused
-            (void)inputs;
-#else
-            fCarlaPluginDescriptor->process(fCarlaPluginHandle, (float**)inputs, outputs, frames, nullptr, 0);
-#endif
 
             checkLatencyChanged();
         }

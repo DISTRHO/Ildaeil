@@ -81,12 +81,13 @@ include ../../dpf/Makefile.plugins.mk
 ifeq ($(WASM),true)
 # used for testing
 LINK_FLAGS += -sALLOW_MEMORY_GROWTH
+LINK_FLAGS += --use-preload-cache
 LINK_FLAGS += --use-preload-plugins
 # LINK_FLAGS += --preload-file=foolme.mp3
 # LINK_FLAGS += --preload-file=furelise.mid
 # LINK_FLAGS += --preload-file=./jsfx
 LINK_FLAGS += --preload-file=./lv2
-# LINK_FLAGS += --shell-file=../Cardinal/src/emscripten/shell.html
+LINK_FLAGS += --shell-file=./emscripten/shell.html
 else ifneq ($(HAIKU),true)
 BUILD_CXX_FLAGS += -pthread
 endif
