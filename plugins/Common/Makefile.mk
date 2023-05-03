@@ -83,8 +83,6 @@ LINK_FLAGS += -sALLOW_MEMORY_GROWTH
 LINK_FLAGS += -sLZ4=1
 LINK_FLAGS += --preload-file=./jsfx
 LINK_FLAGS += --preload-file=./lv2
-# LV2_WASM_BINARIES = $(wildcard ./lv2/*.lv2/*.wasm)
-# LINK_FLAGS += $(LV2_WASM_BINARIES:%=--preload-file=%)
 LINK_FLAGS += --shell-file=./emscripten/shell.html
 # LINK_FLAGS += --use-preload-cache
 LINK_FLAGS += --use-preload-plugins

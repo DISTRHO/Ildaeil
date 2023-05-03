@@ -445,7 +445,7 @@ protected:
            #endif
 
            #if DISTRHO_PLUGIN_NUM_INPUTS == 0
-            inputs = fDummyBuffers;
+            inputs = (const float**)fDummyBuffers;
            #endif
            #if DISTRHO_PLUGIN_NUM_OUTPUTS == 0
             outputs = fDummyBuffers;
