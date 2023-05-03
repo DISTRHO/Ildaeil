@@ -104,11 +104,27 @@ class IldaeilUI : public UI,
         }* parameters;
         float* values;
 
+        uint presetCount;
+        struct Preset {
+            uint32_t index;
+            char* name;
+            ~Preset()
+            {
+                std::free(name);
+            }
+        }* presets;
+        int currentPreset;
+        const char** presetStrings;
+
         PluginGenericUI()
             : title(nullptr),
               parameterCount(0),
               parameters(nullptr),
-              values(nullptr) {}
+              values(nullptr),
+              presetCount(0),
+              presets(nullptr),
+              currentPreset(-1),
+              presetStrings(nullptr) {}
 
         ~PluginGenericUI()
         {
@@ -370,9 +386,9 @@ public:
 
     void showPluginUI(const CarlaHostHandle handle, const bool showIfNotEmbed)
     {
+       #ifndef DISTRHO_OS_WASM
         const uint hints = carla_get_plugin_info(handle, fPluginId)->hints;
 
-       #ifndef DISTRHO_OS_WASM
         if (hints & PLUGIN_HAS_CUSTOM_EMBED_UI)
         {
             fDrawingState = kDrawingPluginEmbedUI;
@@ -436,10 +452,10 @@ public:
         title += info->maker;
         ui->title = title.getAndReleaseBuffer();
 
-        const uint32_t pcount = ui->parameterCount = carla_get_parameter_count(handle, fPluginId);
+        const uint32_t parameterCount = ui->parameterCount = carla_get_parameter_count(handle, fPluginId);
 
         // make count of valid parameters
-        for (uint32_t i=0; i < pcount; ++i)
+        for (uint32_t i=0; i < parameterCount; ++i)
         {
             const ParameterData* const pdata = carla_get_parameter_data(handle, fPluginId, i);
 
@@ -457,7 +473,7 @@ public:
         ui->values = new float[ui->parameterCount];
 
         // now safely fill in details
-        for (uint32_t i=0, j=0; i < pcount; ++i)
+        for (uint32_t i=0, j=0; i < parameterCount; ++i)
         {
             const ParameterData* const pdata = carla_get_parameter_data(handle, fPluginId, i);
 
@@ -495,6 +511,41 @@ public:
 
             ++j;
         }
+
+        // handle presets too
+        const uint32_t presetCount = ui->presetCount = carla_get_program_count(handle, fPluginId);
+
+        for (uint32_t i=0; i < presetCount; ++i)
+        {
+            const char* const pname = carla_get_program_name(handle, fPluginId, i);
+
+            if (pname[0] == '\0')
+            {
+                --ui->presetCount;
+                continue;
+            }
+        }
+
+        ui->presets = new PluginGenericUI::Preset[ui->presetCount];
+        ui->presetStrings = new const char*[ui->presetCount];
+
+        for (uint32_t i=0, j=0; i < presetCount; ++i)
+        {
+            const char* const pname = carla_get_program_name(handle, fPluginId, i);
+
+            if (pname[0] == '\0')
+                continue;
+
+            PluginGenericUI::Preset& preset(ui->presets[j]);
+            preset.index = i;
+            preset.name = strdup(pname);
+
+            ui->presetStrings[j] = preset.name;
+
+            ++j;
+        }
+
+        ui->currentPreset = -1;
 
         fPluginGenericUI = ui;
     }
@@ -1073,6 +1124,19 @@ protected:
         if (ImGui::Begin(ui->title, nullptr, pflags))
         {
             const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
+            if (ui->presetCount != 0)
+            {
+                ImGui::Text("Preset:");
+                ImGui::SameLine();
+
+                if (ImGui::Combo("##presets", &ui->currentPreset, ui->presetStrings, ui->presetCount))
+                {
+                    PluginGenericUI::Preset& preset(ui->presets[ui->currentPreset]);
+
+                    carla_set_program(handle, fPluginId, preset.index);
+                }
+            }
 
             for (uint32_t i=0; i < ui->parameterCount; ++i)
             {

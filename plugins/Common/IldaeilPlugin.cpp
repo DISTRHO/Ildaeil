@@ -431,7 +431,7 @@ protected:
                     break;
             }
            #else
-            static constexpr const* NativeMidiEvent fMidiEvents = nullptr;
+            static constexpr const NativeMidiEvent* fMidiEvents = nullptr;
             static constexpr const uint32_t midiEventCount = 0;
            #endif
 
