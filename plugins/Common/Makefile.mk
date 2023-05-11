@@ -96,7 +96,6 @@ BUILD_CXX_FLAGS += -I../../dpf-widgets/opengl
 BUILD_CXX_FLAGS += -DCARLA_BACKEND_NAMESPACE=$(CARLA_BACKEND_NAMESPACE)
 BUILD_CXX_FLAGS += -DSTATIC_PLUGIN_TARGET
 
-BUILD_CXX_FLAGS += -DREAL_BUILD
 BUILD_CXX_FLAGS += -I../../carla/source/backend
 BUILD_CXX_FLAGS += -I../../carla/source/includes
 BUILD_CXX_FLAGS += -I../../carla/source/modules
@@ -114,6 +113,9 @@ ifeq ($(STANDALONE),true)
 
 TARGETS_BASE =
 TARGETS_EXTRA = jack
+ifeq ($(MACOS),true)
+TARGETS_EXTRA += carlabins
+endif
 
 else
 
@@ -137,7 +139,7 @@ ifneq ($(USE_SYSTEM_CARLA_BINS),true)
 CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-bridge-native$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk2$(APP_EXT)
 CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-bridge-lv2-gtk3$(APP_EXT)
-CARLA_BINARIES  = $(CURDIR)/../../carla/bin/carla-discovery-native$(APP_EXT)
+CARLA_BINARIES += $(CURDIR)/../../carla/bin/carla-discovery-native$(APP_EXT)
 
 ifeq ($(CARLA_EXTRA_TARGETS),true)
 
@@ -161,11 +163,15 @@ endif
 endif # CARLA_EXTRA_TARGETS
 
 carlabins: $(TARGETS_BASE)
+ifeq ($(STANDALONE),true)
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(jack))
+else
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(clap))
 ifneq ($(NAME),Ildaeil-MIDI)
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst3))
+endif
 endif
 
 else # USE_SYSTEM_CARLA_BINS

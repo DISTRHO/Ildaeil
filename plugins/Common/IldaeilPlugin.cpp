@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2023 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,6 +16,7 @@
  */
 
 #include "IldaeilBasePlugin.hpp"
+#include "DistrhoPluginUtils.hpp"
 
 #include "CarlaEngine.hpp"
 #include "water/files/File.h"
@@ -329,8 +330,18 @@ public:
         {
             fDiscoveryTool = bundlePath;
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, bundlePath);
-            // carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "");
+            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, getResourcePath(bundlePath));
         }
+       #ifdef CARLA_OS_MAC
+        else if (bundlePath != nullptr
+            && water::File(bundlePath + water::String("/Contents/MacOS/carla-bridge-native" EXT)).existsAsFile())
+        {
+            fDiscoveryTool = bundlePath;
+            fDiscoveryTool += "/Contents/MacOS";
+            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, fDiscoveryTool);
+            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, getResourcePath(bundlePath));
+        }
+       #endif
         else
         {
            #ifdef CARLA_OS_MAC
