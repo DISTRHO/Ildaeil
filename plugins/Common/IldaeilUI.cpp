@@ -237,9 +237,9 @@ public:
         std::strcpy(fPluginSearchString, "Search...");
 
         ImGuiStyle& style(ImGui::GetStyle());
-        style.FrameRounding = 4;
+        style.FrameRounding = 4 * scaleFactor;
 
-        const double paddingY = style.WindowPadding.y * 2;
+        const double paddingY = style.WindowPadding.y * 2 * scaleFactor;
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {

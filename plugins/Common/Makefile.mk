@@ -164,6 +164,7 @@ endif # CARLA_EXTRA_TARGETS
 
 carlabins: $(TARGETS_BASE)
 ifeq ($(STANDALONE),true)
+	mkdir -p $(shell dirname $(jack))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(jack))
 else
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(lv2))
