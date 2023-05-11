@@ -62,9 +62,9 @@ static const char* getPathForLADSPA()
     if (path.isEmpty())
     {
        #if defined(CARLA_OS_HAIKU)
-        path  = getHomePath() + "/.ladspa:/system/add-ons/media/ladspaplugins:/system/lib/ladspa";
+        path = getHomePath() + "/.ladspa:/system/add-ons/media/ladspaplugins:/system/lib/ladspa";
        #elif defined(CARLA_OS_MAC)
-        ladspa  = getHomePath() + "/Library/Audio/Plug-Ins/LADSPA:/Library/Audio/Plug-Ins/LADSPA";
+        path = getHomePath() + "/Library/Audio/Plug-Ins/LADSPA:/Library/Audio/Plug-Ins/LADSPA";
        #elif defined(CARLA_OS_WASM)
         path = "/ladspa";
        #elif defined(CARLA_OS_WIN)
@@ -344,6 +344,7 @@ public:
            #endif
         }
 
+        carla_stdout("Using binary path: %s", fDiscoveryTool.buffer());
         fDiscoveryTool += DISTRHO_OS_SEP_STR "carla-discovery-native" EXT;
 
         #undef EXT
