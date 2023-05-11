@@ -849,14 +849,12 @@ protected:
     {
         if (info->io.cvIns != 0 || info->io.cvOuts != 0)
             return;
-
-       #if ILDAEIL_STANDALONE
         if (info->io.midiIns != 0 && info->io.midiIns != 1)
             return;
         if (info->io.midiOuts != 0 && info->io.midiOuts != 1)
             return;
-        if (info->io.audioIns > 2 || info->io.audioOuts > 2)
-            return;
+
+       #if ILDAEIL_STANDALONE
         if (fPluginType == PLUGIN_INTERNAL)
         {
             if (std::strcmp(info->label, "audiogain") == 0)
@@ -867,11 +865,11 @@ protected:
                 return;
         }
        #elif DISTRHO_PLUGIN_IS_SYNTH
-        if (info->io.midiIns != 1 && info->io.audioIns != 0)
+        if (info->io.midiIns != 1)
             return;
-        if ((info->metadata.hints & PLUGIN_IS_SYNTH) == 0x0 && info->io.audioIns != 0)
+        if (info->io.audioIns == 0)
             return;
-        if (info->io.audioOuts != 1 && info->io.audioOuts != 2)
+        if ((info->metadata.hints & PLUGIN_IS_SYNTH) == 0x0)
             return;
        #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
         if ((info->io.midiIns != 1 && info->io.audioIns != 0 && info->io.audioOuts != 0) || info->io.midiOuts != 1)
