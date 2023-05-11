@@ -47,7 +47,7 @@ endif
 CARLA_TARGETS = static-plugin
 
 ifneq ($(USE_SYSTEM_CARLA_BINS),true)
-CARLA_TARGETS += bridges-plugin bridges-ui
+CARLA_TARGETS += bridges-plugin bridges-ui discovery
 
 ifeq ($(CARLA_EXTRA_TARGETS),true)
 
@@ -156,6 +156,9 @@ dpf/utils/lv2_ttl_generator:
 else
 gen:
 endif
+
+jack: carla dgl
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
 
 # ---------------------------------------------------------------------------------------------------------------------
 

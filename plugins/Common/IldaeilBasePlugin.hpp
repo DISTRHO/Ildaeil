@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2022 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2023 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -20,6 +20,7 @@
 #include "CarlaNativePlugin.h"
 #include "DistrhoPlugin.hpp"
 #include "extra/Mutex.hpp"
+#include "extra/String.hpp"
 
 // generates a warning if this is defined as anything else
 #define CARLA_API
@@ -32,13 +33,15 @@ class IldaeilBasePlugin : public Plugin
 {
 public:
     static Mutex sPluginInfoLoadMutex;
-    static const char* getPathForJSFX();
+    static const char* getPluginPath(PluginType ptype);
 
     const NativePluginDescriptor* fCarlaPluginDescriptor;
     NativePluginHandle fCarlaPluginHandle;
 
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
+
+    String fDiscoveryTool;
 
     void* fUI;
 

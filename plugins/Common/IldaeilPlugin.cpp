@@ -47,14 +47,161 @@ Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const char* IldaeilBasePlugin::getPathForJSFX()
+#ifndef CARLA_OS_WIN
+static water::String getHomePath()
+{
+    static water::String path(water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName());
+    return path;
+}
+#endif
+
+static const char* getPathForLADSPA()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path  = getHomePath() + "/.ladspa:/system/add-ons/media/ladspaplugins:/system/lib/ladspa";
+       #elif defined(CARLA_OS_MAC)
+        ladspa  = getHomePath() + "/Library/Audio/Plug-Ins/LADSPA:/Library/Audio/Plug-Ins/LADSPA";
+       #elif defined(CARLA_OS_WASM)
+        path = "/ladspa";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\LADSPA;";
+        path += water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName() + "\\LADSPA";
+       #else
+        path  = getHomePath() + "/.ladspa:/usr/lib/ladspa:/usr/local/lib/ladspa";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForDSSI()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path = getHomePath() + "/.dssi:/system/add-ons/media/dssiplugins:/system/lib/dssi";
+       #elif defined(CARLA_OS_MAC)
+        path = getHomePath() + "/Library/Audio/Plug-Ins/DSSI:/Library/Audio/Plug-Ins/DSSI";
+       #elif defined(CARLA_OS_WASM)
+        path = "/dssi";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\DSSI;";
+        path += water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName() + "\\DSSI";
+       #else
+        path = getHomePath() + "/.dssi:/usr/lib/dssi:/usr/local/lib/dssi";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForLV2()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path = getHomePath() + "/.lv2:/system/add-ons/media/lv2plugins";
+       #elif defined(CARLA_OS_MAC)
+        path = getHomePath() + "/Library/Audio/Plug-Ins/LV2:/Library/Audio/Plug-Ins/LV2";
+       #elif defined(CARLA_OS_WASM)
+        path = "/lv2";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\LV2;";
+        path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\LV2";
+       #else
+        path = getHomePath() + "/.lv2:/usr/lib/lv2:/usr/local/lib/lv2";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForVST2()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path = getHomePath() + "/.vst:/system/add-ons/media/vstplugins";
+       #elif defined(CARLA_OS_MAC)
+        path = getHomePath() + "/Library/Audio/Plug-Ins/VST:/Library/Audio/Plug-Ins/VST";
+       #elif defined(CARLA_OS_WASM)
+        path = "/vst";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName() + "\\VstPlugins;";
+        path += water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName() + "\\Steinberg\\VstPlugins;";
+        path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\VST2";
+       #else
+        path = getHomePath() + "/.vst:/usr/lib/vst:/usr/local/lib/vst";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForVST3()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path = getHomePath() + "/.vst3:/system/add-ons/media/dssiplugins";
+       #elif defined(CARLA_OS_MAC)
+        path = getHomePath() + "/Library/Audio/Plug-Ins/VST3:/Library/Audio/Plug-Ins/VST3";
+       #elif defined(CARLA_OS_WASM)
+        path = "/vst3";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\VST3;";
+        path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\VST3";
+       #else
+        path = getHomePath() + "/.vst3:/usr/lib/vst3:/usr/local/lib/vst3";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForCLAP()
+{
+    static water::String path;
+
+    if (path.isEmpty())
+    {
+       #if defined(CARLA_OS_HAIKU)
+        path = getHomePath() + "/.clap:/system/add-ons/media/clapplugins";
+       #elif defined(CARLA_OS_MAC)
+        path = getHomePath() + "/Library/Audio/Plug-Ins/CLAP:/Library/Audio/Plug-Ins/CLAP";
+       #elif defined(CARLA_OS_WASM)
+        path = "/clap";
+       #elif defined(CARLA_OS_WIN)
+        path  = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\CLAP;";
+        path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\CLAP";
+       #else
+        path = getHomePath() + "/.clap:/usr/lib/clap:/usr/local/lib/clap";
+       #endif
+    }
+
+    return path.toRawUTF8();
+}
+
+static const char* getPathForJSFX()
 {
     static water::String path;
 
     if (path.isEmpty())
     {
        #if defined(CARLA_OS_MAC)
-        path = water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName()
+        path = getHomePath()
              + "/Library/Application Support/REAPER/Effects";
         if (! water::File(path).isDirectory())
             path = "/Applications/REAPER.app/Contents/InstallFiles/Effects";
@@ -69,12 +216,47 @@ const char* IldaeilBasePlugin::getPathForJSFX()
         if (const char* const configHome = std::getenv("XDG_CONFIG_HOME"))
             path = configHome;
         else
-            path = water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName() + "/.config";
+            path = getHomePath() + "/.config";
         path += "/REAPER/Effects";
        #endif
     }
 
     return path.toRawUTF8();
+}
+
+const char* IldaeilBasePlugin::getPluginPath(const PluginType ptype)
+{
+    switch (ptype)
+    {
+    case PLUGIN_LADSPA:
+        if (const char* const path = std::getenv("LADSPA_PATH"))
+            return path;
+        return getPathForLADSPA();
+    case PLUGIN_DSSI:
+        if (const char* const path = std::getenv("DSSI_PATH"))
+            return path;
+        return getPathForDSSI();
+    case PLUGIN_LV2:
+        if (const char* const path = std::getenv("LV2_PATH"))
+            return path;
+        return getPathForLV2();
+    case PLUGIN_VST2:
+        if (const char* const path = std::getenv("VST_PATH"))
+            return path;
+        return getPathForVST2();
+    case PLUGIN_VST3:
+        if (const char* const path = std::getenv("VST3_PATH"))
+            return path;
+        return getPathForVST3();
+    case PLUGIN_CLAP:
+        if (const char* const path = std::getenv("CLAP_PATH"))
+            return path;
+        return getPathForCLAP();
+    case PLUGIN_JSFX:
+        return getPathForJSFX();
+    default:
+        return nullptr;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -145,26 +327,34 @@ public:
         if (bundlePath != nullptr
             && water::File(bundlePath + water::String(DISTRHO_OS_SEP_STR "carla-bridge-native" EXT)).existsAsFile())
         {
+            fDiscoveryTool = bundlePath;
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, bundlePath);
             // carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "");
         }
         else
         {
            #ifdef CARLA_OS_MAC
+            fDiscoveryTool = "/Applications/Carla.app/Contents/MacOS";
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/Applications/Carla.app/Contents/MacOS");
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/Applications/Carla.app/Contents/MacOS/resources");
            #else
+            fDiscoveryTool = "/usr/lib/carla";
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/usr/lib/carla");
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
            #endif
         }
 
+        fDiscoveryTool += DISTRHO_OS_SEP_STR "carla-discovery-native" EXT;
+
         #undef EXT
 
-        if (const char* const path = std::getenv("LV2_PATH"))
-            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LV2, path);
-
-        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_JSFX, getPathForJSFX());
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LADSPA, getPluginPath(PLUGIN_LADSPA));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_DSSI, getPluginPath(PLUGIN_DSSI));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_LV2, getPluginPath(PLUGIN_LV2));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_VST2, getPluginPath(PLUGIN_VST2));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_VST3, getPluginPath(PLUGIN_VST3));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_CLAP, getPluginPath(PLUGIN_CLAP));
+        carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PLUGIN_PATH, PLUGIN_JSFX, getPluginPath(PLUGIN_JSFX));
 
         fCarlaPluginDescriptor->dispatcher(fCarlaPluginHandle, NATIVE_PLUGIN_OPCODE_HOST_USES_EMBED,
                                            0, 0, nullptr, 0.0f);

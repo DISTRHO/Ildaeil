@@ -29,6 +29,7 @@
 // IDE helper
 #include "DearImGui.hpp"
 
+#include <string>
 #include <vector>
 
 // strcasestr
@@ -64,18 +65,11 @@ class IldaeilUI : public UI,
     static constexpr const uint kButtonHeight  = 20;
 
     struct PluginInfoCache {
-        char* name;
-        char* label;
-
-        PluginInfoCache()
-            : name(nullptr),
-              label(nullptr) {}
-
-        ~PluginInfoCache()
-        {
-            std::free(name);
-            std::free(label);
-        }
+        BinaryType btype;
+        uint64_t uniqueId;
+        std::string filename;
+        std::string name;
+        std::string label;
     };
 
     struct PluginGenericUI {
@@ -164,7 +158,6 @@ class IldaeilUI : public UI,
 
     PluginType fPluginType;
     PluginType fNextPluginType;
-    uint fPluginCount;
     uint fPluginId;
     int fPluginSelected;
     bool fPluginScanningFinished;
@@ -174,7 +167,9 @@ class IldaeilUI : public UI,
     bool fPluginHasOutputParameters;
     bool fPluginRunning;
     bool fPluginWillRunInBridgeMode;
-    PluginInfoCache* fPlugins;
+    Mutex fPluginsMutex;
+    PluginInfoCache fCurrentPluginInfo;
+    std::vector<PluginInfoCache> fPlugins;
     ScopedPointer<PluginGenericUI> fPluginGenericUI;
 
     bool fPluginSearchActive;
@@ -186,19 +181,21 @@ class IldaeilUI : public UI,
 
     struct RunnerData {
         bool needsReinit;
-        uint pluginCount;
-        uint pluginIndex;
+        CarlaPluginDiscoveryHandle handle;
 
         RunnerData()
           : needsReinit(true),
-            pluginCount(0),
-            pluginIndex(0) {}
+            handle(nullptr) {}
         
         void init()
         {
             needsReinit = true;
-            pluginCount = 0;
-            pluginIndex = 0;
+
+            if (handle != nullptr)
+            {
+                carla_plugin_discovery_stop(handle);
+                handle = nullptr;
+            }
         }
     } fRunnerData;
 
@@ -212,7 +209,6 @@ public:
           fPluginHostWindow(getWindow(), this),
           fPluginType(PLUGIN_LV2),
           fNextPluginType(fPluginType),
-          fPluginCount(0),
           fPluginId(0),
           fPluginSelected(-1),
           fPluginScanningFinished(false),
@@ -222,7 +218,7 @@ public:
           fPluginHasOutputParameters(false),
           fPluginRunning(false),
           fPluginWillRunInBridgeMode(false),
-          fPlugins(nullptr),
+          fCurrentPluginInfo(),
           fPluginSearchActive(false),
           fPluginSearchFirstShow(false),
           fRunnerData()
@@ -305,8 +301,6 @@ public:
 
         stopRunner();
         fPluginGenericUI = nullptr;
-
-        delete[] fPlugins;
     }
 
     bool checkIfPluginIsLoaded()
@@ -564,7 +558,7 @@ public:
         }
     }
 
-    void loadPlugin(const CarlaHostHandle handle, const char* const label)
+    bool loadPlugin(const CarlaHostHandle handle, const PluginInfoCache& info)
     {
         if (fPluginRunning || fPluginId != 0)
         {
@@ -576,8 +570,17 @@ public:
 
         const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
 
-        if (carla_add_plugin(handle, BINARY_NATIVE, fPluginType, nullptr, nullptr,
-                             label, 0, 0x0, PLUGIN_OPTIONS_NULL))
+        const bool ok = carla_add_plugin(handle,
+                                         info.btype,
+                                         fPluginType,
+                                         info.filename.c_str(),
+                                         info.name.c_str(),
+                                         info.label.c_str(),
+                                         info.uniqueId,
+                                         nullptr,
+                                         PLUGIN_OPTIONS_NULL);
+
+        if (ok)
         {
             fPluginRunning = true;
             fPluginGenericUI = nullptr;
@@ -604,6 +607,7 @@ public:
         }
 
         repaint();
+        return ok;
     }
 
     void loadFileAsPlugin(const CarlaHostHandle handle, const char* const filename)
@@ -691,7 +695,7 @@ protected:
             if (fPluginFilename.isNotEmpty())
                 loadFileAsPlugin(handle, fPluginFilename.buffer());
             else
-                loadPlugin(handle, carla_get_plugin_info(handle, fPluginId)->label);
+                loadPlugin(handle, fCurrentPluginInfo);
             break;
 
         case kIdleOpenFileUI:
@@ -749,32 +753,16 @@ protected:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fPluginSelected >= 0,);
 
-        const PluginInfoCache& info(fPlugins[fPluginSelected]);
-
-        const char* label = nullptr;
-
-        switch (fPluginType)
+        PluginInfoCache info;
         {
-        case PLUGIN_INTERNAL:
-        case PLUGIN_AU:
-        case PLUGIN_JSFX:
-        case PLUGIN_SFZ:
-            label = info.label;
-            break;
-        case PLUGIN_LV2: {
-            const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
-            DISTRHO_SAFE_ASSERT_RETURN(slash != nullptr,);
-            label = slash+1;
-            break;
-        }
-        default:
-            break;
+            const MutexLocker cml(fPluginsMutex);
+            info = fPlugins[fPluginSelected];
         }
 
-        DISTRHO_SAFE_ASSERT_RETURN(label != nullptr,);
+        d_stdout("Loading %s...", info.name.c_str());
 
-        d_stdout("Loading %s...", info.name);
-        loadPlugin(handle, label);
+        if (loadPlugin(handle, info))
+            fCurrentPluginInfo = info;
     }
 
     void uiFileBrowserSelected(const char* const filename) override
@@ -802,30 +790,21 @@ protected:
         if (fRunnerData.needsReinit)
         {
             fRunnerData.needsReinit = false;
+            fPluginScanningFinished = false;
 
-            const char* path;
-            switch (fPluginType)
             {
-            case PLUGIN_LV2:
-                path = std::getenv("LV2_PATH");
-                break;
-            case PLUGIN_JSFX:
-                path = fPlugin->getPathForJSFX();
-                break;
-            default:
-                path = nullptr;
-                break;
+                const MutexLocker cml(fPluginsMutex);
+                fPlugins.clear();
             }
-
-            fPluginCount = 0;
-            delete[] fPlugins;
 
             {
                 const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
 
                 d_stdout("Will scan plugins now...");
-                fRunnerData.pluginCount = carla_get_cached_plugin_count(fPluginType, path);
-                d_stdout("Scanning found %u plugins", fRunnerData.pluginCount);
+                fRunnerData.handle = carla_plugin_discovery_start(fPlugin->fDiscoveryTool,
+                                                                  fPluginType,
+                                                                  IldaeilBasePlugin::getPluginPath(fPluginType),
+                                                                  _binaryPluginSearchCallback, this);
             }
 
             if (fDrawingState == kDrawingLoading)
@@ -834,99 +813,109 @@ protected:
                 fPluginSearchFirstShow = true;
             }
 
-            if (fRunnerData.pluginCount != 0)
+            if (fRunnerData.handle == nullptr)
             {
-                fPlugins = new PluginInfoCache[fRunnerData.pluginCount];
-                fPluginScanningFinished = false;
-                return true;
-            }
-            else
-            {
-                fPlugins = nullptr;
+                d_stdout("Nothing found!");
                 fPluginScanningFinished = true;
                 return false;
             }
         }
 
-        const uint index = fRunnerData.pluginIndex++;
-        DISTRHO_SAFE_ASSERT_UINT2_RETURN(index < fRunnerData.pluginCount,
-                                         index, fRunnerData.pluginCount, false);
+        DISTRHO_SAFE_ASSERT_RETURN(!fPluginScanningFinished, false);
+        DISTRHO_SAFE_ASSERT_RETURN(fRunnerData.handle != nullptr, false);
 
-        do {
+        bool ok;
+        {
             const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+            ok = carla_plugin_discovery_idle(fRunnerData.handle);
+        }
 
-            const CarlaCachedPluginInfo* const info = carla_get_cached_plugin_info(fPluginType, index);
-            DISTRHO_SAFE_ASSERT_RETURN(info != nullptr, true);
-
-            if (! info->valid)
-                break;
-            if (info->cvIns != 0 || info->cvOuts != 0)
-                break;
-
-           #if ILDAEIL_STANDALONE
-            if (info->midiIns != 0 && info->midiIns != 1)
-                break;
-            if (info->midiOuts != 0 && info->midiOuts != 1)
-                break;
-            if (info->audioIns > 2 || info->audioOuts > 2)
-                break;
-            if (fPluginType == PLUGIN_INTERNAL)
-            {
-                if (std::strcmp(info->label, "audiogain") == 0)
-                    break;
-                if (std::strcmp(info->label, "midichanfilter") == 0)
-                    break;
-                if (std::strcmp(info->label, "midichannelize") == 0)
-                    break;
-            }
-           #elif DISTRHO_PLUGIN_IS_SYNTH
-            if (info->midiIns != 1 && info->audioIns != 0)
-                break;
-            if ((info->hints & PLUGIN_IS_SYNTH) == 0x0 && info->audioIns != 0)
-                break;
-            if (info->audioOuts != 1 && info->audioOuts != 2)
-                break;
-           #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
-            if ((info->midiIns != 1 && info->audioIns != 0 && info->audioOuts != 0) || info->midiOuts != 1)
-                break;
-            if (info->audioIns != 0 || info->audioOuts != 0)
-                break;
-           #else
-            if (info->audioIns != 1 && info->audioIns != 2)
-                break;
-            if (info->audioOuts != 1 && info->audioOuts != 2)
-                break;
-           #endif
-
-            if (fPluginType == PLUGIN_INTERNAL)
-            {
-               #if !ILDAEIL_STANDALONE
-                if (std::strcmp(info->label, "audiogain_s") == 0)
-                    break;
-               #endif
-                if (std::strcmp(info->label, "lfo") == 0)
-                    break;
-                if (std::strcmp(info->label, "midi2cv") == 0)
-                    break;
-                if (std::strcmp(info->label, "midithrough") == 0)
-                    break;
-                if (std::strcmp(info->label, "3bandsplitter") == 0)
-                    break;
-            }
-
-            const uint pindex = fPluginCount;
-            fPlugins[pindex].name = strdup(info->name);
-            fPlugins[pindex].label = strdup(info->label);
-            ++fPluginCount;
-        } while (false);
-
-        // run again
-        if (fRunnerData.pluginIndex != fRunnerData.pluginCount)
+        if (ok)
             return true;
 
         // stop here
+        {
+            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
+            d_stdout("Found %lu plugins!", (ulong)fPlugins.size());
+            carla_plugin_discovery_stop(fRunnerData.handle);
+            fRunnerData.handle = nullptr;
+        }
+
         fPluginScanningFinished = true;
         return false;
+    }
+
+    void binaryPluginSearchCallback(const CarlaPluginDiscoveryInfo* const info)
+    {
+        if (info->io.cvIns != 0 || info->io.cvOuts != 0)
+            return;
+
+       #if ILDAEIL_STANDALONE
+        if (info->io.midiIns != 0 && info->io.midiIns != 1)
+            return;
+        if (info->io.midiOuts != 0 && info->io.midiOuts != 1)
+            return;
+        if (info->io.audioIns > 2 || info->io.audioOuts > 2)
+            return;
+        if (fPluginType == PLUGIN_INTERNAL)
+        {
+            if (std::strcmp(info->label, "audiogain") == 0)
+                return;
+            if (std::strcmp(info->label, "midichanfilter") == 0)
+                return;
+            if (std::strcmp(info->label, "midichannelize") == 0)
+                return;
+        }
+       #elif DISTRHO_PLUGIN_IS_SYNTH
+        if (info->io.midiIns != 1 && info->io.audioIns != 0)
+            return;
+        if ((info->metadata.hints & PLUGIN_IS_SYNTH) == 0x0 && info->io.audioIns != 0)
+            return;
+        if (info->io.audioOuts != 1 && info->io.audioOuts != 2)
+            return;
+       #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
+        if ((info->io.midiIns != 1 && info->io.audioIns != 0 && info->io.audioOuts != 0) || info->io.midiOuts != 1)
+            return;
+        if (info->io.audioIns != 0 || info->io.audioOuts != 0)
+            return;
+       #else
+        if (info->io.audioIns != 1 && info->io.audioIns != 2)
+            return;
+        if (info->io.audioOuts != 1 && info->io.audioOuts != 2)
+            return;
+       #endif
+
+        if (fPluginType == PLUGIN_INTERNAL)
+        {
+           #if !ILDAEIL_STANDALONE
+            if (std::strcmp(info->label, "audiogain_s") == 0)
+                return;
+           #endif
+            if (std::strcmp(info->label, "lfo") == 0)
+                return;
+            if (std::strcmp(info->label, "midi2cv") == 0)
+                return;
+            if (std::strcmp(info->label, "midithrough") == 0)
+                return;
+            if (std::strcmp(info->label, "3bandsplitter") == 0)
+                return;
+        }
+
+        const PluginInfoCache pinfo = {
+            info->btype,
+            info->uniqueId,
+            info->filename,
+            info->metadata.name,
+            info->label,
+        };
+
+        const MutexLocker cml(fPluginsMutex);
+        fPlugins.push_back(pinfo);
+    }
+
+    static void _binaryPluginSearchCallback(void* ptr, const CarlaPluginDiscoveryInfo* info)
+    {
+        static_cast<IldaeilUI*>(ptr)->binaryPluginSearchCallback(info);
     }
 
     void onImGuiDisplay() override
@@ -1258,7 +1247,12 @@ protected:
     {
         static const char* pluginTypes[] = {
             getPluginTypeAsString(PLUGIN_INTERNAL),
+            getPluginTypeAsString(PLUGIN_LADSPA),
+            getPluginTypeAsString(PLUGIN_DSSI),
             getPluginTypeAsString(PLUGIN_LV2),
+            getPluginTypeAsString(PLUGIN_VST2),
+            getPluginTypeAsString(PLUGIN_VST3),
+            getPluginTypeAsString(PLUGIN_CLAP),
             getPluginTypeAsString(PLUGIN_JSFX),
             "Load from file..."
         };
@@ -1309,15 +1303,14 @@ protected:
             int current;
             switch (fPluginType)
             {
-            case PLUGIN_JSFX:
-                current = 2;
-                break;
-            case PLUGIN_LV2:
-                current = 1;
-                break;
-            default:
-                current = 0;
-                break;
+            case PLUGIN_JSFX: current = 7; break;
+            case PLUGIN_CLAP: current = 6; break;
+            case PLUGIN_VST3: current = 5; break;
+            case PLUGIN_VST2: current = 4; break;
+            case PLUGIN_LV2: current = 3; break;
+            case PLUGIN_DSSI: current = 2; break;
+            case PLUGIN_LADSPA: current = 1; break;
+            default: current = 0; break;
             }
 
             if (ImGui::Combo("##plugintypes", &current, pluginTypes, ARRAY_SIZE(pluginTypes)))
@@ -1325,18 +1318,15 @@ protected:
                 fIdleState = kIdleChangePluginType;
                 switch (current)
                 {
-                case 0:
-                    fNextPluginType = PLUGIN_INTERNAL;
-                    break;
-                case 1:
-                    fNextPluginType = PLUGIN_LV2;
-                    break;
-                case 2:
-                    fNextPluginType = PLUGIN_JSFX;
-                    break;
-                case 3:
-                    fNextPluginType = PLUGIN_TYPE_COUNT;
-                    break;
+                case 0: fNextPluginType = PLUGIN_INTERNAL; break;
+                case 1: fNextPluginType = PLUGIN_LADSPA; break;
+                case 2: fNextPluginType = PLUGIN_DSSI; break;
+                case 3: fNextPluginType = PLUGIN_LV2; break;
+                case 4: fNextPluginType = PLUGIN_VST2; break;
+                case 5: fNextPluginType = PLUGIN_VST3; break;
+                case 6: fNextPluginType = PLUGIN_CLAP; break;
+                case 7: fNextPluginType = PLUGIN_JSFX; break;
+                case 8: fNextPluginType = PLUGIN_TYPE_COUNT; break;
                 }
             }
 
@@ -1372,8 +1362,6 @@ protected:
                     {
                     case PLUGIN_INTERNAL:
                     case PLUGIN_AU:
-                    case PLUGIN_SFZ:
-                    case PLUGIN_JSFX:
                         ImGui::TableSetupColumn("Name");
                         ImGui::TableSetupColumn("Label");
                         ImGui::TableHeadersRow();
@@ -1384,14 +1372,19 @@ protected:
                         ImGui::TableHeadersRow();
                         break;
                     default:
+                        ImGui::TableSetupColumn("Name");
+                        ImGui::TableSetupColumn("Filename");
+                        ImGui::TableHeadersRow();
                         break;
                     }
 
-                    for (uint i=0; i<fPluginCount; ++i)
+                    const MutexLocker cml(fPluginsMutex);
+
+                    for (uint i=0; i<fPlugins.size(); ++i)
                     {
                         const PluginInfoCache& info(fPlugins[i]);
 
-                        if (search != nullptr && ildaeil::strcasestr(info.name, search) == nullptr)
+                        if (search != nullptr && ildaeil::strcasestr(info.name.c_str(), search) == nullptr)
                             continue;
 
                         bool selected = fPluginSelected >= 0 && static_cast<uint>(fPluginSelected) == i;
@@ -1400,25 +1393,25 @@ protected:
                         {
                         case PLUGIN_INTERNAL:
                         case PLUGIN_AU:
-                        case PLUGIN_JSFX:
-                        case PLUGIN_SFZ:
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0);
-                            ImGui::Selectable(info.name, &selected);
+                            ImGui::Selectable(info.name.c_str(), &selected);
                             ImGui::TableSetColumnIndex(1);
-                            ImGui::Selectable(info.label, &selected);
+                            ImGui::Selectable(info.label.c_str(), &selected);
                             break;
-                        case PLUGIN_LV2: {
-                            const char* const slash = std::strchr(info.label, DISTRHO_OS_SEP);
-                            DISTRHO_SAFE_ASSERT_CONTINUE(slash != nullptr);
+                        case PLUGIN_LV2:
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0);
-                            ImGui::Selectable(info.name, &selected);
+                            ImGui::Selectable(info.name.c_str(), &selected);
                             ImGui::TableSetColumnIndex(1);
-                            ImGui::Selectable(slash+1, &selected);
+                            ImGui::Selectable(info.label.c_str(), &selected);
                             break;
-                        }
                         default:
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Selectable(info.name.c_str(), &selected);
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::Selectable(info.filename.c_str(), &selected);
                             break;
                         }
 
