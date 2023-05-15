@@ -1328,7 +1328,7 @@ protected:
                 }
             }
 
-            ImGui::BeginDisabled(!fPluginScanningFinished || fPluginSelected < 0);
+            ImGui::BeginDisabled(fPluginSelected < 0);
 
             if (ImGui::Button("Load Plugin"))
                 fIdleState = kIdleLoadSelectedPlugin;
