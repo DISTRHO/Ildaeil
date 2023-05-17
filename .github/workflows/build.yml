@@ -34,9 +34,9 @@ jobs:
           dpkg -l
           sudo apt-get purge libmono* moby* mono* msbuild* nginx* php* libgdiplus libpcre2-posix3 libpq5 nuget
           dpkg -l
-          sudo dpkg --add-architecture i386
-          sudo apt-get update -qq
-          sudo apt-get install libicu70:i386 libc6:i386 libgcc-s1:i386 libstdc++6:i386 --allow-downgrades
+          # sudo dpkg --add-architecture i386
+          # sudo apt-get update -qq
+          # sudo apt-get install libicu70:i386 libc6:i386 libgcc-s1:i386 libstdc++6:i386 --allow-downgrades
       - name: Set up dependencies (win32)
         if: ${{ matrix.target == 'win32' }}
         run: |
