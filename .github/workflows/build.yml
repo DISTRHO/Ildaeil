@@ -30,8 +30,9 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
           dpkg -l
-          sudo apt-get install -yqq --allow-downgrades libgd3/jammy libpcre2-8-0/jammy libpcre2-16-0/jammy libpcre2-32-0/jammy
-          sudo apt-get purge libmono* moby* mono* msbuild* php* libgdiplus libpcre2* libpq5 nuget
+          sudo apt-get install -yqq --allow-downgrades libgd3/jammy libpcre2-8-0/jammy libpcre2-16-0/jammy libpcre2-32-0/jammy libpcre2-posix3/jammy
+          dpkg -l
+          sudo apt-get purge libmono* moby* mono* msbuild* php* libgdiplus libpcre3* libpq5 nuget
           dpkg -l
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
