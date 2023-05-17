@@ -32,6 +32,9 @@ jobs:
           sudo apt-get install -yqq --allow-downgrades libgd3/jammy
           sudo apt-get purge -yqq libmagickcore* libmono* moby* mono* msbuild* php* azure-cli libgdiplus libpcre2-posix3 libpq5 nuget walinuxagent
           dpkg -l
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install wine32
       - name: Set up dependencies (win32)
         if: ${{ matrix.target == 'win32' }}
         run: |
