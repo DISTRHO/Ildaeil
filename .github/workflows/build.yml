@@ -30,7 +30,7 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
           sudo apt-get install -yqq --allow-downgrades libgd3/jammy
-          sudo apt-get purge -yqq libmono* moby* mono* msbuild* php*  libgdiplus libpcre2* libpq5 nuget
+          sudo apt-get purge libmono* moby* mono* msbuild* php* libgdiplus libpcre2* libpq5 nuget
           dpkg -l
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
