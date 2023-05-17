@@ -30,13 +30,14 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
           dpkg -l
-          sudo apt-get install -yqq --allow-downgrades libgd3/jammy libicu70/jammy libpcre2-8-0/jammy libpcre2-16-0/jammy libpcre2-32-0/jammy libpcre2-posix3/jammy
+          sudo apt-get install --allow-downgrades libgd3/jammy libicu70/jammy libpcre2-8-0/jammy libpcre2-16-0/jammy libpcre2-32-0/jammy libpcre2-posix3/jammy
           dpkg -l
           sudo apt-get purge libmono* moby* mono* msbuild* nginx* php* libgdiplus libpcre2-posix3 libpq5 nuget
           dpkg -l
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install libc6:i386 libgcc-s1:i386 libicu70:i386 libstdc++6:i386 --allow-downgrades
+          sudo apt-get install libc6:i386 libgcc-s1:i386 libstdc++6:i386 --allow-downgrades
+          # libicu70:i386 
       - name: Set up dependencies (win32)
         if: ${{ matrix.target == 'win32' }}
         run: |
