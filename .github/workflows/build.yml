@@ -167,19 +167,14 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install libc6:i386 libgcc-s1:i386 libstdc++6:i386 --allow-downgrades
       - name: Set up dependencies (win32)
         if: ${{ matrix.target == 'win32' }}
         run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-i686 g++-mingw-w64-i686 gperf mingw-w64 wine-stable
+          sudo apt-get install -yqq --allow-downgrades binutils-mingw-w64-i686 libc6:i386 libgcc-s1:i386 libstdc++6:i386 g++-mingw-w64-i686 gperf mingw-w64 wine-stable
       - name: Set up dependencies (win64)
         if: ${{ matrix.target == 'win64' }}
         run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update -qq
-          sudo apt-get install -yqq binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64 gperf mingw-w64 wine-stable
+          sudo apt-get install -yqq --allow-downgrades binutils-mingw-w64-x86-64 libc6:i386 libgcc-s1:i386 libstdc++6:i386 g++-mingw-w64-x86-64 gperf mingw-w64 wine-stable
       - name: Build extra dependencies
         run: |
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
