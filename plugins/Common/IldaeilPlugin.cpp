@@ -40,7 +40,7 @@ static void host_ui_custom_data_changed(NativeHostHandle handle, const char* key
 static void host_ui_closed(NativeHostHandle handle);
 static const char* host_ui_open_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
 static const char* host_ui_save_file(NativeHostHandle handle, bool isDir, const char* title, const char* filter);
-static intptr_t host_dispatcher(NativeHostHandle handle, NativeHostDispatcherOpcode opcode, int32_t index, intptr_t value, void* ptr, float opt);
+static intptr_t host_dispatcher(NativeHostHandle h, NativeHostDispatcherOpcode op, int32_t, intptr_t, void*, float);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,13 +48,11 @@ Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#ifndef CARLA_OS_WIN
 static water::String getHomePath()
 {
     static water::String path(water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName());
     return path;
 }
-#endif
 
 static const char* getPathForLADSPA()
 {
@@ -258,6 +256,32 @@ const char* IldaeilBasePlugin::getPluginPath(const PluginType ptype)
     default:
         return nullptr;
     }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+const char* ildaeilConfigDir()
+{
+    static water::String configDir;
+
+    if (configDir.isEmpty())
+    {
+       #if defined(CARLA_OS_WASM)
+        configDir = "/userfiles";
+       #elif defined(CARLA_OS_MAC)
+        configDir = getHomePath() + "/Documents/Ildaeil";
+       #elif defined(CARLA_OS_WIN)
+        configDir = water::File::getSpecialLocation(water::File::winMyDocuments).getFullPathName() + "\\Ildaeil";
+       #else
+        if (const char* const xdgEnv = getenv("XDG_CONFIG_HOME"))
+            configDir = xdgEnv;
+        else
+            configDir = getHomePath() + "/.config";
+        configDir += "/Ildaeil";
+       #endif
+    }
+
+    return configDir.toRawUTF8();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

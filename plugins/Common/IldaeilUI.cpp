@@ -29,6 +29,11 @@
 // IDE helper
 #include "DearImGui.hpp"
 
+#include "water/files/File.h"
+#include "water/files/FileInputStream.h"
+#include "water/files/FileOutputStream.h"
+#include "water/memory/MemoryBlock.h"
+
 #include <string>
 #include <vector>
 
@@ -160,7 +165,6 @@ class IldaeilUI : public UI,
     PluginType fNextPluginType;
     uint fPluginId;
     int fPluginSelected;
-    bool fPluginScanningFinished;
     bool fPluginHasCustomUI;
     bool fPluginHasEmbedUI;
     bool fPluginHasFileOpen;
@@ -211,7 +215,6 @@ public:
           fNextPluginType(fPluginType),
           fPluginId(0),
           fPluginSelected(-1),
-          fPluginScanningFinished(false),
           fPluginHasCustomUI(false),
           fPluginHasEmbedUI(false),
           fPluginHasFileOpen(false),
@@ -790,22 +793,19 @@ protected:
         if (fRunnerData.needsReinit)
         {
             fRunnerData.needsReinit = false;
-            fPluginScanningFinished = false;
 
             {
                 const MutexLocker cml(fPluginsMutex);
                 fPlugins.clear();
             }
 
-            {
-                const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
-
-                d_stdout("Will scan plugins now...");
-                fRunnerData.handle = carla_plugin_discovery_start(fPlugin->fDiscoveryTool,
-                                                                  fPluginType,
-                                                                  IldaeilBasePlugin::getPluginPath(fPluginType),
-                                                                  _binaryPluginSearchCallback, this);
-            }
+            d_stdout("Will scan plugins now...");
+            fRunnerData.handle = carla_plugin_discovery_start(fPlugin->fDiscoveryTool,
+                                                              fPluginType,
+                                                              IldaeilBasePlugin::getPluginPath(fPluginType),
+                                                              _binaryPluginSearchCallback,
+                                                              _binaryPluginCheckCacheCallback,
+                                                              this);
 
             if (fDrawingState == kDrawingLoading)
             {
@@ -816,37 +816,74 @@ protected:
             if (fRunnerData.handle == nullptr)
             {
                 d_stdout("Nothing found!");
-                fPluginScanningFinished = true;
                 return false;
             }
         }
 
-        DISTRHO_SAFE_ASSERT_RETURN(!fPluginScanningFinished, false);
         DISTRHO_SAFE_ASSERT_RETURN(fRunnerData.handle != nullptr, false);
 
-        bool ok;
-        {
-            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
-            ok = carla_plugin_discovery_idle(fRunnerData.handle);
-        }
-
-        if (ok)
+        if (carla_plugin_discovery_idle(fRunnerData.handle))
             return true;
 
         // stop here
-        {
-            const MutexLocker cml(fPlugin->sPluginInfoLoadMutex);
-            d_stdout("Found %lu plugins!", (ulong)fPlugins.size());
-            carla_plugin_discovery_stop(fRunnerData.handle);
-            fRunnerData.handle = nullptr;
-        }
+        d_stdout("Found %lu plugins!", (ulong)fPlugins.size());
+        carla_plugin_discovery_stop(fRunnerData.handle);
+        fRunnerData.handle = nullptr;
 
-        fPluginScanningFinished = true;
         return false;
     }
 
-    void binaryPluginSearchCallback(const CarlaPluginDiscoveryInfo* const info)
+    void binaryPluginSearchCallback(const CarlaPluginDiscoveryInfo* const info, const char* const sha1sum)
     {
+        // save plugin info into cache
+        if (sha1sum != nullptr)
+        {
+            const water::String configDir(ildaeilConfigDir());
+            const water::File cacheFile(configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum);
+
+            if (cacheFile.create().ok())
+            {
+                water::FileOutputStream stream(cacheFile);
+
+                if (stream.openedOk())
+                {
+                    if (info != nullptr)
+                    {
+                        stream.writeString(getBinaryTypeAsString(info->btype));
+                        stream.writeString(getPluginTypeAsString(info->ptype));
+                        stream.writeString(info->filename);
+                        stream.writeString(info->label);
+                        stream.writeInt64(info->uniqueId);
+                        stream.writeString(info->metadata.name);
+                        stream.writeString(info->metadata.maker);
+                        stream.writeString(getPluginCategoryAsString(info->metadata.category));
+                        stream.writeInt(info->metadata.hints);
+                        stream.writeCompressedInt(info->io.audioIns);
+                        stream.writeCompressedInt(info->io.audioOuts);
+                        stream.writeCompressedInt(info->io.cvIns);
+                        stream.writeCompressedInt(info->io.cvOuts);
+                        stream.writeCompressedInt(info->io.midiIns);
+                        stream.writeCompressedInt(info->io.midiOuts);
+                        stream.writeCompressedInt(info->io.parameterIns);
+                        stream.writeCompressedInt(info->io.parameterOuts);
+                    }
+                }
+                else
+                {
+                    d_stderr("Failed to write cache file for %s%s%s",
+                            ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+                }
+            }
+            else
+            {
+                d_stderr("Failed to write cache file directories for %s%s%s",
+                         ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+            }
+        }
+
+        if (info == nullptr)
+            return;
+
         if (info->io.cvIns != 0 || info->io.cvOuts != 0)
             return;
         if (info->io.midiIns != 0 && info->io.midiIns != 1)
@@ -911,9 +948,83 @@ protected:
         fPlugins.push_back(pinfo);
     }
 
-    static void _binaryPluginSearchCallback(void* ptr, const CarlaPluginDiscoveryInfo* info)
+    static void _binaryPluginSearchCallback(void* const ptr,
+                                            const CarlaPluginDiscoveryInfo* const info,
+                                            const char* const sha1sum)
     {
-        static_cast<IldaeilUI*>(ptr)->binaryPluginSearchCallback(info);
+        static_cast<IldaeilUI*>(ptr)->binaryPluginSearchCallback(info, sha1sum);
+    }
+
+    bool binaryPluginCheckCacheCallback(const char* const filename, const char* const sha1sum)
+    {
+        if (sha1sum == nullptr)
+            return false;
+
+        const water::String configDir(ildaeilConfigDir());
+        const water::File cacheFile(configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum);
+
+        if (cacheFile.existsAsFile())
+        {
+            water::FileInputStream stream(cacheFile);
+
+            if (stream.openedOk())
+            {
+                while (! stream.isExhausted())
+                {
+                    CarlaPluginDiscoveryInfo info = {};
+
+                    // read back everything the same way and order as we wrote it
+                    info.btype = getBinaryTypeFromString(stream.readString().toRawUTF8());
+                    info.ptype = getPluginTypeFromString(stream.readString().toRawUTF8());
+                    const water::String pfilename(stream.readString());
+                    const water::String label(stream.readString());
+                    info.uniqueId = stream.readInt64();
+                    const water::String name(stream.readString());
+                    const water::String maker(stream.readString());
+                    info.metadata.category = getPluginCategoryFromString(stream.readString().toRawUTF8());
+                    info.metadata.hints = stream.readInt();
+                    info.io.audioIns = stream.readCompressedInt();
+                    info.io.audioOuts = stream.readCompressedInt();
+                    info.io.cvIns = stream.readCompressedInt();
+                    info.io.cvOuts = stream.readCompressedInt();
+                    info.io.midiIns = stream.readCompressedInt();
+                    info.io.midiOuts = stream.readCompressedInt();
+                    info.io.parameterIns = stream.readCompressedInt();
+                    info.io.parameterOuts = stream.readCompressedInt();
+
+                    // string stuff
+                    info.filename = pfilename.toRawUTF8();
+                    info.label = label.toRawUTF8();
+                    info.metadata.name = name.toRawUTF8();
+                    info.metadata.maker = maker.toRawUTF8();
+
+                    // check sha1 collisions
+                    if (pfilename != filename)
+                    {
+                        d_stderr("Cache hash collision for %s: \"%s\" vs \"%s\"",
+                                sha1sum, pfilename.toRawUTF8(), filename);
+                        return false;
+                    }
+
+                    // purposefully not passing sha1sum, to not override cache file
+                    binaryPluginSearchCallback(&info, nullptr);
+                }
+
+                return true;
+            }
+            else
+            {
+                d_stderr("Failed to read cache file for %s%s%s",
+                         ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+            }
+        }
+
+        return false;
+    }
+
+    static bool _binaryPluginCheckCacheCallback(void* const ptr, const char* const filename, const char* const sha1)
+    {
+        return static_cast<IldaeilUI*>(ptr)->binaryPluginCheckCacheCallback(filename, sha1);
     }
 
     void onImGuiDisplay() override

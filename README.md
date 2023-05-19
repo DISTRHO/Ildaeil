@@ -2,7 +2,7 @@
 
 DISTRHO Ildaeil is mini-plugin host working as a plugin, allowing one-to-one plugin format reusage.  
 The idea is to load it as a plugin inside your DAW and then the other "real" plugin inside Ildaeil.  
-This allows, for example, a VST3 host to load LV2 plugins.
+This allows, for example, a VST3 host to load LV2 plugins and vice-versa.
 
 The Ildaeil name comes from the korean 일대일, which means "one to one".
 
@@ -31,24 +31,23 @@ The current formats Ildaeil can work as are:
 And it can load the following plugin formats:
 
 - Internal (from Carla)
+- LADSPA
+- DSSI
 - LV2
+- VST2
+- VST3
+- CLAP
 - JSFX
 
 With a few extra formats through the "Load from file..." action:
 
-- CLAP plugins
-- VST2 plugins
 - Audio files (through internal audio file player, synced to transport)
 - MIDI files (through internal MIDI file player, synced to transport)
-- SFZ files (through internal SFZero)
 
 ## Goals
 
 Later on, in theory, it should be able to load the following plugin formats:
 
-- LADSPA
-- DSSI
-- VST3
 - AU (macOS only)
 
 Eventually the following files could be loaded too:

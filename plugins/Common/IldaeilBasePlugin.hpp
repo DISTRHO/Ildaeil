@@ -58,6 +58,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+const char* ildaeilConfigDir();
 void ildaeilProjectLoadedFromDSP(void* ui);
 void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
 void ildaeilCloseUI(void* ui);
