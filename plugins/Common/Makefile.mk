@@ -120,7 +120,7 @@ endif
 else
 
 TARGETS_BASE = lv2 vst2 clap
-TARGETS_EXTRA = jack carlabins
+TARGETS_EXTRA = carlabins
 
 # VST3 does not do MIDI filter plugins, by design
 ifneq ($(NAME),Ildaeil-MIDI)
