@@ -270,7 +270,7 @@ jobs:
                 --leak-check=no \
                 --track-origins=yes \
                 --suppressions=./dpf/utils/valgrind-dpf.supp \
-                ./bin/Ildaeil-FX selftest
+                ./bin/Ildaeil selftest
       - name: Validate LV2 ttl syntax
         run: |
           lv2_validate \
