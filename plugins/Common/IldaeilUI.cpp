@@ -93,6 +93,7 @@ class IldaeilUI : public UI,
                   boolean(false),
                   bvalue(false),
                   log(false),
+                  readonly(false),
                   min(0.0f),
                   max(1.0f) {}
             ~Parameter()
@@ -130,6 +131,8 @@ class IldaeilUI : public UI,
             std::free(title);
             delete[] parameters;
             delete[] values;
+            delete[] presets;
+            delete[] presetStrings;
         }
     };
 
@@ -433,7 +436,7 @@ public:
         else
             updatePluginGenericUI(handle);
 
-       #if !ILDAEIL_STANDALONE
+       #ifndef DISTRHO_OS_WASM
         const double scaleFactor = getScaleFactor();
         fNextSize = Size<uint>(kGenericWidth * scaleFactor,
                                (kGenericHeight + ImGui::GetStyle().WindowPadding.y) * scaleFactor);
@@ -448,6 +451,8 @@ public:
         title += " by ";
         title += info->maker;
         ui->title = title.getAndReleaseBuffer();
+
+        fPluginHasOutputParameters = false;
 
         const uint32_t parameterCount = ui->parameterCount = carla_get_parameter_count(handle, fPluginId);
 
@@ -1116,7 +1121,7 @@ protected:
             {
                 fIdleState = kIdleHidePluginUI;
                 fDrawingState = kDrawingPluginList;
-               #if !ILDAEIL_STANDALONE
+               #ifndef DISTRHO_OS_WASM
                 fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
                #endif
             }
@@ -1184,7 +1189,7 @@ protected:
                 if (supportsMIDI() && !isMIDIEnabled() && ImGui::Button("Enable MIDI"))
                     requestMIDI();
 
-                if (supportsBufferSizeChanges())
+                if (fDrawingState != kDrawingPluginEmbedUI && supportsBufferSizeChanges())
                 {
                     ImGui::SameLine();
                     ImGui::Spacing();
