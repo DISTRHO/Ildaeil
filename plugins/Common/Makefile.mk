@@ -33,6 +33,10 @@ FILES_UI = \
 	../Common/PluginHostWindow.cpp \
 	../../dpf-widgets/opengl/DearImGui.cpp
 
+ifeq ($(STANDALONE)$(WINDOWS),truetrue)
+FILES_UI += distrho.rc
+endif
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Carla stuff
 
