@@ -3,7 +3,7 @@ name: build
 on: [push, pull_request]
 
 env:
-  CACHE_VERSION: 7
+  CACHE_VERSION: 1
   PAWPAW_SKIP_LTO: 1
   PAWPAW_SKIP_FFTW: 1
   PAWPAW_SKIP_GLIB: 1
