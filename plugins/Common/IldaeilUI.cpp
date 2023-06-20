@@ -68,6 +68,8 @@ class IldaeilUI : public UI,
     static constexpr const uint kGenericWidth  = 380;
     static constexpr const uint kGenericHeight = 400;
     static constexpr const uint kButtonHeight  = 20;
+    static constexpr const uint kMinWidth      = 120;
+    static constexpr const uint kMinHeight     = 120;
 
     struct PluginInfoCache {
         BinaryType btype;
@@ -236,6 +238,7 @@ public:
             fDrawingState = kDrawingErrorInit;
             fIdleState = kIdleNothing;
             fPopupError = "Ildaeil backend failed to init properly, cannot continue.";
+            setGeometryConstraints(kInitialWidth * scaleFactor * 0.5, kInitialHeight * scaleFactor * 0.5);
             setSize(kInitialWidth * scaleFactor * 0.5, kInitialHeight * scaleFactor * 0.5);
             return;
         }
@@ -249,6 +252,7 @@ public:
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
+            setGeometryConstraints(kMinWidth * scaleFactor, kMinHeight * scaleFactor);
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
             fPluginHostWindow.setPositionAndSize(0, kButtonHeight * scaleFactor + paddingY,
                                                  kInitialWidth * scaleFactor,
@@ -256,6 +260,7 @@ public:
         }
         else
         {
+            setGeometryConstraints(kMinWidth, kMinHeight);
             fPluginHostWindow.setPositionAndSize(0, kButtonHeight + paddingY,
                                                  kInitialWidth, kInitialHeight - kButtonHeight - paddingY);
         }
