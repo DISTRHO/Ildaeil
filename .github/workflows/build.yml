@@ -52,7 +52,7 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-armhf.list
           sudo apt-get update -qq
-          sudo apt-get install -y libc6:armhf libgcc-s1:armhf libglapi-mesa:armhf libglib2.0-0:armhf libglvnd0:armhf libssl1.1:armhf libstdc++6:armhf libuuid1:armhf cpp-arm-linux-gnueabihf g++-9-arm-linux-gnueabihf gcc-9-arm-linux-gnueabihf libcrypt1:armhf libexpat1:armhf gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf pkg-config:armhf openssl libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libglib2.0-dev-bin:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf gperf meson qemu-user-static
+          sudo apt-get install -y libc6:armhf libgcc-s1:armhf libglapi-mesa:armhf libglib2.0-0:armhf libglvnd0:armhf libssl1.1:armhf libstdc++6:armhf libuuid1:armhf cpp-arm-linux-gnueabihf g++-9-arm-linux-gnueabihf gcc-9-arm-linux-gnueabihf libcrypt1:armhf libexpat1:armhf gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf pkg-config:armhf ca-certificates cpp-9-arm-linux-gnueabihf libgmp10:armhf openssl libasound2-dev:armhf libdbus-1-dev:armhf libgl1-mesa-dev:armhf libglib2.0-dev:armhf libglib2.0-dev-bin:armhf libx11-dev:armhf libxcursor-dev:armhf libxext-dev:armhf libxrandr-dev:armhf gperf meson qemu-user-static
       - name: Set up dependencies (i386)
         if: ${{ matrix.target == 'i386' }}
         run: |
