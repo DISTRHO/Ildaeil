@@ -32,7 +32,7 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo apt-get update -qq
           sudo apt-get install -y --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -y libclang* libgbm* libllvm* libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+          sudo apt-get purge -y libclang* libgbm* libllvm* libmono* libnginx* moby* mono* nginx* php* libgdiplus libpcre2-posix3 libzip4
       - name: Set up dependencies (aarch64)
         if: ${{ matrix.target == 'aarch64' }}
         run: |
@@ -42,7 +42,7 @@ jobs:
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports focal-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ports-arm64.list
           sudo apt-get update -qq
-          sudo apt-get install -y libc6:arm64 libgcc-s1:arm64 libglapi-mesa:arm64 libglib2.0-0:arm64 libglvnd0:arm64 libssl1.1:arm64 libuuid1:riscv64 libstdc++6:arm64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu openssl libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 gperf meson qemu-user-static
+          sudo apt-get install -y libc6:arm64 libgcc-s1:arm64 libglapi-mesa:arm64 libglib2.0-0:arm64 libglvnd0:arm64 libssl1.1:arm64 libuuid1:arm64 libstdc++6:arm64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu openssl libasound2-dev:arm64 libdbus-1-dev:arm64 libgl1-mesa-dev:arm64 libglib2.0-dev:arm64 libx11-dev:arm64 libxcursor-dev:arm64 libxext-dev:arm64 libxrandr-dev:arm64 gperf meson qemu-user-static
       - name: Set up dependencies (armhf)
         if: ${{ matrix.target == 'armhf' }}
         run: |
@@ -58,7 +58,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -y libc6:i386 libgcc-s1:i386 libglapi-mesa:i386 libglib2.0-0:i386 libglvnd0:i386 libssl1.1:i386 libstdc++6:i386 libuuid1:riscv64 gcc-i686-linux-gnu g++-i686-linux-gnu openssl libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386 gperf meson
+          sudo apt-get install -y libc6:i386 libgcc-s1:i386 libglapi-mesa:i386 libglib2.0-0:i386 libglvnd0:i386 libssl1.1:i386 libstdc++6:i386 libuuid1:i386 gcc-i686-linux-gnu g++-i686-linux-gnu openssl libasound2-dev:i386 libdbus-1-dev:i386 libgl1-mesa-dev:i386 libglib2.0-dev:i386 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 libxrandr-dev:i386 gperf meson
           sudo apt-get install -y binutils-mingw-w64-i686 g++-aarch64-linux-gnu g++-mingw-w64-i686 mingw-w64 libwine-dev:i386 wine-stable wine64-tools
       - name: Set up dependencies (riscv64)
         if: ${{ matrix.target == 'riscv64' }}
