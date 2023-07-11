@@ -32,8 +32,8 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm /etc/apt/sources.list.d/*.list
           sudo apt-get update -qq
-          sudo apt-get purge -y libclang* libgbm* libllvm* libmono* libnginx* moby* mono* nginx* perl php*
-          sudo apt-get install -y --allow-downgrades autoconf/focal automake/focal build-essential/focal libglib2.0-dev/focal pkg-config/focal
+          sudo apt-get purge -y libclang* libgbm* libllvm* libmono* libnginx* moby* mono* nginx* perl php* libgdiplus libpcre2-posix3 libzip4
+          sudo apt-get install -y --allow-downgrades autoconf/focal automake/focal build-essential/focal libglib2.0-0/focal libglib2.0-dev/focal pkg-config/focal
       - name: Set up dependencies (aarch64)
         if: ${{ matrix.target == 'aarch64' }}
         run: |
