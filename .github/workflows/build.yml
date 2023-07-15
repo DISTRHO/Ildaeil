@@ -107,6 +107,7 @@ jobs:
           name: ${{ github.event.repository.name }}-linux-${{ matrix.target }}-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             bin/*
+            !bin/Ildaeil
 
   macos:
     strategy:
@@ -145,12 +146,11 @@ jobs:
           path: |
             *-macOS.pkg
             bin/*
-            !bin/*-ladspa.dylib
-            !bin/*-dssi.dylib
-            !bin/clap
-            !bin/lv2
-            !bin/vst2
-            !bin/vst3
+            !bin/pkg
+            !bin/*.clap
+            !bin/*.lv2
+            !bin/*.vst
+            !bin/*.vst3
 
   windows:
     strategy:
@@ -197,8 +197,7 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ matrix.target }}-${{ github.event.pull_request.number || steps.slug.outputs.sha8 }}
           path: |
             bin/*
-            !bin/*-ladspa.dll
-            !bin/*-dssi.dll
+            !bin/*.exe
 
   source-tarball:
     runs-on: ubuntu-20.04
