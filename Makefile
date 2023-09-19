@@ -8,6 +8,7 @@ include dpf/Makefile.base.mk
 
 # also set in:
 # plugins/Common/IldaeilPlugin.cpp `getVersion`
+# plugins/Standalone/macOS/Info.plist
 VERSION = 1.3
 
 # ---------------------------------------------------------------------------------------------------------------------

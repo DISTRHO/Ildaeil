@@ -166,6 +166,7 @@ class IldaeilUI : public UI,
     IldaeilBasePlugin* const fPlugin;
     PluginHostWindow fPluginHostWindow;
 
+    BinaryType fBinaryType;
     PluginType fPluginType;
     PluginType fNextPluginType;
     uint fPluginId;
@@ -174,6 +175,7 @@ class IldaeilUI : public UI,
     bool fPluginHasEmbedUI;
     bool fPluginHasFileOpen;
     bool fPluginHasOutputParameters;
+    bool fPluginIsBridge;
     bool fPluginRunning;
     bool fPluginWillRunInBridgeMode;
     Mutex fPluginsMutex;
@@ -185,7 +187,7 @@ class IldaeilUI : public UI,
     bool fPluginSearchFirstShow;
     char fPluginSearchString[0xff];
 
-    String fPopupError, fPluginFilename;
+    String fPopupError, fPluginFilename, fDiscoveryTool;
     Size<uint> fNextSize;
 
     struct RunnerData {
@@ -216,6 +218,7 @@ public:
           fIdleState(kIdleInit),
           fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
           fPluginHostWindow(getWindow(), this),
+          fBinaryType(BINARY_NATIVE),
           fPluginType(PLUGIN_LV2),
           fNextPluginType(fPluginType),
           fPluginId(0),
@@ -224,6 +227,7 @@ public:
           fPluginHasEmbedUI(false),
           fPluginHasFileOpen(false),
           fPluginHasOutputParameters(false),
+          fPluginIsBridge(false),
           fPluginRunning(false),
           fPluginWillRunInBridgeMode(false),
           fCurrentPluginInfo(),
@@ -344,6 +348,8 @@ public:
            #endif
             fPluginHasFileOpen = false;
         }
+
+        fPluginIsBridge = hints & PLUGIN_IS_BRIDGE;
     }
 
     void projectLoadedFromDSP()
@@ -810,12 +816,28 @@ protected:
             }
 
             d_stdout("Will scan plugins now...");
-            fRunnerData.handle = carla_plugin_discovery_start(fPlugin->fDiscoveryTool,
-                                                              fPluginType,
-                                                              IldaeilBasePlugin::getPluginPath(fPluginType),
-                                                              _binaryPluginSearchCallback,
-                                                              _binaryPluginCheckCacheCallback,
-                                                              this);
+
+            const String& binaryPath(fPlugin->fBinaryPath);
+
+            if (binaryPath.isNotEmpty())
+            {
+                fBinaryType = BINARY_NATIVE;
+
+                fDiscoveryTool  = binaryPath;
+                fDiscoveryTool += DISTRHO_OS_SEP_STR "carla-discovery-native";
+               #ifdef CARLA_OS_WIN
+                fDiscoveryTool += ".exe";
+               #endif
+
+                fRunnerData.handle = carla_plugin_discovery_start(fDiscoveryTool,
+                                                                  fBinaryType,
+                                                                  fPluginType,
+                                                                  IldaeilBasePlugin::getPluginPath(fPluginType),
+                                                                  _binaryPluginSearchCallback,
+                                                                  _binaryPluginCheckCacheCallback,
+                                                                  this);
+
+            }
 
             if (fDrawingState == kDrawingLoading)
             {
@@ -823,7 +845,7 @@ protected:
                 fPluginSearchFirstShow = true;
             }
 
-            if (fRunnerData.handle == nullptr)
+            if (binaryPath.isEmpty() || (fRunnerData.handle == nullptr && !startNextDiscovery()))
             {
                 d_stdout("Nothing found!");
                 return false;
@@ -836,11 +858,103 @@ protected:
             return true;
 
         // stop here
-        d_stdout("Found %lu plugins!", (ulong)fPlugins.size());
         carla_plugin_discovery_stop(fRunnerData.handle);
         fRunnerData.handle = nullptr;
 
+        if (startNextDiscovery())
+            return true;
+
+        d_stdout("Found %lu plugins!", (ulong)fPlugins.size());
         return false;
+    }
+
+    bool startNextDiscovery()
+    {
+        if (! setNextDiscoveryTool())
+            return false;
+
+        fRunnerData.handle = carla_plugin_discovery_start(fDiscoveryTool,
+                                                          fBinaryType,
+                                                          fPluginType,
+                                                          IldaeilBasePlugin::getPluginPath(fPluginType),
+                                                          _binaryPluginSearchCallback,
+                                                          _binaryPluginCheckCacheCallback,
+                                                          this);
+
+        if (fRunnerData.handle == nullptr)
+            return startNextDiscovery();
+
+        return true;
+    }
+
+    bool setNextDiscoveryTool()
+    {
+        switch (fPluginType)
+        {
+        case PLUGIN_VST2:
+        case PLUGIN_VST3:
+        case PLUGIN_CLAP:
+            break;
+        default:
+            return false;
+        }
+
+      #ifdef CARLA_OS_WIN
+        #ifdef CARLA_OS_WIN64
+        // look for win32 plugins on win64
+        if (fBinaryType == BINARY_NATIVE)
+        {
+            fBinaryType = BINARY_WIN32;
+            fDiscoveryTool = fPlugin->fBinaryPath;
+            fDiscoveryTool += CARLA_OS_SEP_STR "carla-discovery-win32.exe";
+
+            if (water::File(fDiscoveryTool.buffer()).existsAsFile())
+                return true;
+        }
+       #endif
+
+        // no other types to try
+        return false;
+      #else // CARLA_OS_WIN
+
+       #ifndef CARLA_OS_MAC
+        // try 32bit plugins on 64bit systems, skipping macOS where 32bit is no longer supported
+        if (fBinaryType == BINARY_NATIVE)
+        {
+            fBinaryType = BINARY_POSIX32;
+            fDiscoveryTool = fPlugin->fBinaryPath;
+            fDiscoveryTool += CARLA_OS_SEP_STR "carla-discovery-posix32";
+
+            if (water::File(fDiscoveryTool.buffer()).existsAsFile())
+                return true;
+        }
+       #endif
+
+        // try wine bridges
+       #ifdef CARLA_OS_64BIT
+        if (fBinaryType == BINARY_NATIVE || fBinaryType == BINARY_POSIX32)
+        {
+            fBinaryType = BINARY_WIN64;
+            fDiscoveryTool = fPlugin->fBinaryPath;
+            fDiscoveryTool += CARLA_OS_SEP_STR "carla-discovery-win64.exe";
+
+            if (water::File(fDiscoveryTool.buffer()).existsAsFile())
+                return true;
+        }
+       #endif
+
+        if (fBinaryType != BINARY_WIN32)
+        {
+            fBinaryType = BINARY_WIN32;
+            fDiscoveryTool = fPlugin->fBinaryPath;
+            fDiscoveryTool += CARLA_OS_SEP_STR "carla-discovery-win32.exe";
+
+            if (water::File(fDiscoveryTool.buffer()).existsAsFile())
+                return true;
+        }
+
+        return false;
+      #endif // CARLA_OS_WIN
     }
 
     void binaryPluginSearchCallback(const CarlaPluginDiscoveryInfo* const info, const char* const sha1sum)
@@ -1278,6 +1392,23 @@ protected:
         if (ImGui::Begin(ui->title, nullptr, pflags))
         {
             const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
+
+            if (fPluginIsBridge)
+            {
+                const bool active = carla_get_internal_parameter_value(handle, 0, PARAMETER_ACTIVE) > 0.5f;
+
+                if (active)
+                {
+                    ImGui::BeginDisabled();
+                    ImGui::Button("Reload bridge");
+                    ImGui::EndDisabled();
+                }
+                else
+                {
+                    if (ImGui::Button("Reload bridge"))
+                        carla_set_active(handle, 0, true);
+                }
+            }
 
             if (ui->presetCount != 0)
             {

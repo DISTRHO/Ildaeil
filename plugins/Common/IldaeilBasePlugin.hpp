@@ -41,7 +41,7 @@ public:
     NativeHostDescriptor fCarlaHostDescriptor;
     CarlaHostHandle fCarlaHostHandle;
 
-    String fDiscoveryTool;
+    String fBinaryPath;
 
     void* fUI;
 

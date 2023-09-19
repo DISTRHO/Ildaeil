@@ -141,6 +141,25 @@ static const char* getPathForVST2()
         path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\VST2";
        #else
         path = getHomePath() + "/.vst:/usr/lib/vst:/usr/local/lib/vst";
+
+        water::String winePrefix;
+        if (const char* const envWINEPREFIX = std::getenv("WINEPREFIX"))
+            winePrefix = envWINEPREFIX;
+
+        if (winePrefix.isEmpty())
+            winePrefix = getHomePath() + "/.wine";
+
+        if (water::File(winePrefix).exists())
+        {
+            path += ":" + winePrefix + "/drive_c/Program Files/Common Files/VST2";
+            path += ":" + winePrefix + "/drive_c/Program Files/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files/Steinberg/VstPlugins";
+           #ifdef CARLA_OS_64BIT
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/Common Files/VST2";
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/Steinberg/VstPlugins";
+           #endif
+        }
        #endif
     }
 
@@ -164,6 +183,21 @@ static const char* getPathForVST3()
         path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\VST3";
        #else
         path = getHomePath() + "/.vst3:/usr/lib/vst3:/usr/local/lib/vst3";
+
+        water::String winePrefix;
+        if (const char* const envWINEPREFIX = std::getenv("WINEPREFIX"))
+            winePrefix = envWINEPREFIX;
+
+        if (winePrefix.isEmpty())
+            winePrefix = getHomePath() + "/.wine";
+
+        if (water::File(winePrefix).exists())
+        {
+            path += ":" + winePrefix + "/drive_c/Program Files/Common Files/VST3";
+           #ifdef CARLA_OS_64BIT
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/Common Files/VST3";
+           #endif
+        }
        #endif
     }
 
@@ -187,6 +221,21 @@ static const char* getPathForCLAP()
         path += water::File::getSpecialLocation(water::File::winCommonProgramFiles).getFullPathName() + "\\CLAP";
        #else
         path = getHomePath() + "/.clap:/usr/lib/clap:/usr/local/lib/clap";
+
+        water::String winePrefix;
+        if (const char* const envWINEPREFIX = std::getenv("WINEPREFIX"))
+            winePrefix = envWINEPREFIX;
+
+        if (winePrefix.isEmpty())
+            winePrefix = getHomePath() + "/.wine";
+
+        if (water::File(winePrefix).exists())
+        {
+            path += ":" + winePrefix + "/drive_c/Program Files/Common Files/CLAP";
+           #ifdef CARLA_OS_64BIT
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/Common Files/CLAP";
+           #endif
+        }
        #endif
     }
 
@@ -352,7 +401,7 @@ public:
         if (bundlePath != nullptr
             && water::File(bundlePath + water::String(DISTRHO_OS_SEP_STR "carla-bridge-native" EXT)).existsAsFile())
         {
-            fDiscoveryTool = bundlePath;
+            fBinaryPath = bundlePath;
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, bundlePath);
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, getResourcePath(bundlePath));
         }
@@ -360,27 +409,27 @@ public:
         else if (bundlePath != nullptr
             && water::File(bundlePath + water::String("/Contents/MacOS/carla-bridge-native" EXT)).existsAsFile())
         {
-            fDiscoveryTool = bundlePath;
-            fDiscoveryTool += "/Contents/MacOS";
-            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, fDiscoveryTool);
+            fBinaryPath = bundlePath;
+            fBinaryPath += "/Contents/MacOS";
+            carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, fBinaryPath);
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, getResourcePath(bundlePath));
         }
        #endif
         else
         {
            #ifdef CARLA_OS_MAC
-            fDiscoveryTool = "/Applications/Carla.app/Contents/MacOS";
+            fBinaryPath = "/Applications/Carla.app/Contents/MacOS";
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/Applications/Carla.app/Contents/MacOS");
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/Applications/Carla.app/Contents/MacOS/resources");
            #else
-            fDiscoveryTool = "/usr/lib/carla";
+            fBinaryPath = "/usr/lib/carla";
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, "/usr/lib/carla");
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_RESOURCES, 0, "/usr/share/carla/resources");
            #endif
         }
 
-        carla_stdout("Using binary path: %s", fDiscoveryTool.buffer());
-        fDiscoveryTool += DISTRHO_OS_SEP_STR "carla-discovery-native" EXT;
+        if (fBinaryPath.isNotEmpty())
+            carla_stdout("Using binary path for discovery tools: %s", fBinaryPath.buffer());
 
         #undef EXT
 
