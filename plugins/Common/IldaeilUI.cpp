@@ -252,7 +252,7 @@ public:
         ImGuiStyle& style(ImGui::GetStyle());
         style.FrameRounding = 4 * scaleFactor;
 
-        const double paddingY = style.WindowPadding.y * 2 * scaleFactor;
+        const double paddingY = style.WindowPadding.y * 2;
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
