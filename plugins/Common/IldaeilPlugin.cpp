@@ -48,11 +48,13 @@ Mutex IldaeilBasePlugin::sPluginInfoLoadMutex;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#ifndef CARLA_OS_WIN
 static water::String getHomePath()
 {
     static water::String path(water::File::getSpecialLocation(water::File::userHomeDirectory).getFullPathName());
     return path;
 }
+#endif
 
 static const char* getPathForLADSPA()
 {
