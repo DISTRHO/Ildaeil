@@ -29,7 +29,8 @@ ifeq ($(WASM),true)
 USE_SYSTEM_CARLA_BINS = true
 endif
 
-CARLA_EXTRA_ARGS = CARLA_BACKEND_NAMESPACE=Ildaeil \
+CARLA_EXTRA_ARGS = \
+	CARLA_BACKEND_NAMESPACE=Ildaeil \
 	CAN_GENERATE_LV2_TTL=false \
 	CUSTOM_DPF_PATH=$(CURDIR)/dpf \
 	DGL_NAMESPACE=IldaeilDGL \
@@ -141,11 +142,11 @@ dgl:
 	$(MAKE) $(DGL_EXTRA_ARGS) -C dpf/dgl opengl
 
 plugins: carla dgl
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
 ifneq ($(WASM),true)
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/FX
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) -C plugins/MIDI
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) -C plugins/Synth
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/FX
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_MIDI_ARGS) -C plugins/MIDI
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_SYNTH_ARGS) -C plugins/Synth
 endif
 
 ifneq ($(CROSS_COMPILING),true)
