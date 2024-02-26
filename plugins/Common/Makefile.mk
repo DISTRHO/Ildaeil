@@ -126,9 +126,9 @@ else
 TARGETS_BASE = lv2 vst2 clap
 TARGETS_EXTRA = carlabins
 
-# VST3 does not do MIDI filter plugins, by design
+# Skip MIDI filter for AUv2 and VST3, which deal with pure MIDI plugins in a weird way
 ifneq ($(NAME),Ildaeil-MIDI)
-TARGETS_BASE += vst3
+TARGETS_BASE += vst3 au
 endif
 
 endif
@@ -175,6 +175,9 @@ else
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst2))
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(clap))
 ifneq ($(NAME),Ildaeil-MIDI)
+ifeq ($(MACOS),true)
+	install -m 755 $(CARLA_BINARIES) $(shell dirname $(au))
+endif
 	install -m 755 $(CARLA_BINARIES) $(shell dirname $(vst3))
 endif
 endif

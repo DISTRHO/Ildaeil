@@ -258,15 +258,12 @@ public:
         {
             setGeometryConstraints(kMinWidth * scaleFactor, kMinHeight * scaleFactor);
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
-            fPluginHostWindow.setPositionAndSize(0, kButtonHeight * scaleFactor + paddingY,
-                                                 kInitialWidth * scaleFactor,
-                                                 (kInitialHeight - kButtonHeight) * scaleFactor - paddingY);
+            fPluginHostWindow.setOffset(0, kButtonHeight * scaleFactor + paddingY);
         }
         else
         {
             setGeometryConstraints(kMinWidth, kMinHeight);
-            fPluginHostWindow.setPositionAndSize(0, kButtonHeight + paddingY,
-                                                 kInitialWidth, kInitialHeight - kButtonHeight - paddingY);
+            fPluginHostWindow.setOffset(0, kButtonHeight + paddingY);
         }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
@@ -672,8 +669,6 @@ protected:
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
         DISTRHO_SAFE_ASSERT_RETURN(handle != nullptr,);
 
-        // carla_juce_idle();
-
         if (fDrawingState == kDrawingPluginGenericUI && fPluginGenericUI != nullptr && fPluginHasOutputParameters)
         {
             updatePluginGenericUI(handle);
@@ -1028,9 +1023,7 @@ protected:
        #elif DISTRHO_PLUGIN_IS_SYNTH
         if (info->io.midiIns != 1)
             return;
-        if (info->io.audioIns == 0)
-            return;
-        if ((info->metadata.hints & PLUGIN_IS_SYNTH) == 0x0)
+        if (info->io.audioOuts == 0)
             return;
        #elif DISTRHO_PLUGIN_WANT_MIDI_OUTPUT
         if ((info->io.midiIns != 1 && info->io.audioIns != 0 && info->io.audioOuts != 0) || info->io.midiOuts != 1)

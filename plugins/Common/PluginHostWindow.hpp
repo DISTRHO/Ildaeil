@@ -38,7 +38,7 @@ public:
     void* attachAndGetWindowHandle();
     bool hide();
     void idle();
-    void setPositionAndSize(uint x, uint y, uint width, uint height);
+    void setOffset(uint x, uint y);
 };
 
 END_NAMESPACE_DGL

@@ -57,8 +57,7 @@ struct PluginHostWindow::PrivateData
 
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-    NSView* view;
-    NSView* subview;
+    NSView* pluginView;
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
     ::HWND pluginWindow;
@@ -76,8 +75,7 @@ struct PluginHostWindow::PrivateData
           pluginWindowCallbacks(cbs),
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-          view(nullptr),
-          subview(nullptr),
+          pluginView(nullptr),
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
           pluginWindow(nullptr),
@@ -91,12 +89,6 @@ struct PluginHostWindow::PrivateData
     {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-        view = [[NSView new]retain];
-        DISTRHO_SAFE_ASSERT_RETURN(view != nullptr,)
-        [view setAutoresizingMask:NSViewNotSizable];
-        [view setAutoresizesSubviews:NO];
-        [view setHidden:YES];
-        [(NSView*)parentWindowId addSubview:view];
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
@@ -109,8 +101,6 @@ struct PluginHostWindow::PrivateData
     {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-        if (view != nullptr)
-            [view release];
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
 #else
@@ -125,8 +115,8 @@ struct PluginHostWindow::PrivateData
 #if defined(DISTRHO_OS_HAIKU)
         return nullptr;
 #elif defined(DISTRHO_OS_MAC)
-        subview = nullptr;
-        return view;
+        pluginView = nullptr;
+        return (void*)parentWindowId;
 #elif defined(DISTRHO_OS_WASM)
         return nullptr;
 #elif defined(DISTRHO_OS_WINDOWS)
@@ -142,9 +132,10 @@ struct PluginHostWindow::PrivateData
     {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-        if (view != nullptr)
+        if (pluginView != nullptr)
         {
-            [view setHidden:YES];
+            [pluginView setHidden:YES];
+            pluginView = nullptr;
             [NSOpenGLContext clearCurrentContext];
             return true;
         }
@@ -174,14 +165,17 @@ struct PluginHostWindow::PrivateData
         {
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-            if (view == nullptr)
-                return;
-
-            if (subview == nullptr)
+            if (pluginView == nullptr)
             {
-                for (NSView* subview2 in [view subviews])
+                bool first = true;
+                for (NSView* view in [(NSView*)parentWindowId subviews])
                 {
-                    subview = subview2;
+                    if (first)
+                    {
+                        first = false;
+                        continue;
+                    }
+                    pluginView = view;
                     break;
                 }
             }
@@ -214,10 +208,10 @@ struct PluginHostWindow::PrivateData
 
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
-        if (subview != nullptr)
+        if (pluginView != nullptr)
         {
-            const double scaleFactor = [[[view window] screen] backingScaleFactor];
-            const NSSize size = [subview frame].size;
+            const double scaleFactor = [[[pluginView window] screen] backingScaleFactor];
+            const NSSize size = [pluginView frame].size;
             const double width = size.width;
             const double height = size.height;
 
@@ -227,9 +221,8 @@ struct PluginHostWindow::PrivateData
             if (width > 1.0 && height > 1.0)
             {
                 lookingForChildren = false;
-                [view setFrameSize:size];
-                [view setHidden:NO];
-                [view setNeedsDisplay:YES];
+                [pluginView setFrameOrigin:NSMakePoint(xOffset / scaleFactor, yOffset / scaleFactor)];
+                [pluginView setNeedsDisplay:YES];
                 pluginWindowCallbacks->pluginWindowResized(width * scaleFactor, height * scaleFactor);
             }
         }
@@ -317,25 +310,8 @@ struct PluginHostWindow::PrivateData
 #endif
     }
 
-    void setPositionAndSize(const uint x, const uint y, const uint width, const uint height)
+    void setOffset(const uint x, const uint y)
     {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
-        if (view != nullptr)
-        {
-            const double scaleFactor = [[[view window] screen] backingScaleFactor];
-            [view setFrame:NSMakeRect(x / scaleFactor, y / scaleFactor, width / scaleFactor, height / scaleFactor)];
-        }
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
-        // unused
-        (void)width;
-        (void)height;
-#else
-        // unused
-        (void)width;
-        (void)height;
-#endif
         xOffset = x;
         yOffset = y;
     }
@@ -364,9 +340,9 @@ void PluginHostWindow::idle()
     pData->idle();
 }
 
-void PluginHostWindow::setPositionAndSize(const uint x, const uint y, const uint width, const uint height)
+void PluginHostWindow::setOffset(const uint x, const uint y)
 {
-    pData->setPositionAndSize(x, y, width, height);
+    pData->setOffset(x, y);
 }
 
 END_NAMESPACE_DGL
