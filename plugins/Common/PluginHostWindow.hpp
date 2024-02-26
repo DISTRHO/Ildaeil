@@ -39,6 +39,7 @@ public:
     bool hide();
     void idle();
     void setOffset(uint x, uint y);
+    void setSize(uint width, uint height);
 };
 
 END_NAMESPACE_DGL

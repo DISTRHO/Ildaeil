@@ -68,8 +68,6 @@ class IldaeilUI : public UI,
     static constexpr const uint kGenericWidth  = 380;
     static constexpr const uint kGenericHeight = 400;
     static constexpr const uint kButtonHeight  = 20;
-    static constexpr const uint kMinWidth      = 120;
-    static constexpr const uint kMinHeight     = 120;
 
     struct PluginInfoCache {
         BinaryType btype;
@@ -188,7 +186,10 @@ class IldaeilUI : public UI,
     char fPluginSearchString[0xff];
 
     String fPopupError, fPluginFilename, fDiscoveryTool;
-    Size<uint> fNextSize;
+    Size<uint> fCurrentConstraintSize, fLastSize, fNextSize;
+    bool fIgnoreNextHostWindowResize;
+    bool fShowingHostWindow;
+    bool fUpdateGeometryConstraints;
 
     struct RunnerData {
         bool needsReinit;
@@ -233,6 +234,9 @@ public:
           fCurrentPluginInfo(),
           fPluginSearchActive(false),
           fPluginSearchFirstShow(false),
+          fIgnoreNextHostWindowResize(false),
+          fShowingHostWindow(false),
+          fUpdateGeometryConstraints(false),
           fRunnerData()
     {
         const double scaleFactor = getScaleFactor();
@@ -256,13 +260,13 @@ public:
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
-            setGeometryConstraints(kMinWidth * scaleFactor, kMinHeight * scaleFactor);
+            setGeometryConstraints(kInitialWidth * scaleFactor, kInitialWidth * scaleFactor);
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
             fPluginHostWindow.setOffset(0, kButtonHeight * scaleFactor + paddingY);
         }
         else
         {
-            setGeometryConstraints(kMinWidth, kMinHeight);
+            setGeometryConstraints(kInitialWidth, kInitialWidth);
             fPluginHostWindow.setOffset(0, kButtonHeight + paddingY);
         }
 
@@ -405,6 +409,9 @@ public:
             fPluginHasEmbedUI = true;
             fPluginHasFileOpen = false;
 
+            fIgnoreNextHostWindowResize = false;
+            fShowingHostWindow = true;
+
             carla_embed_custom_ui(handle, fPluginId, fPluginHostWindow.attachAndGetWindowHandle());
         }
         else
@@ -448,6 +455,8 @@ public:
         const double scaleFactor = getScaleFactor();
         fNextSize = Size<uint>(kGenericWidth * scaleFactor,
                                (kGenericHeight + ImGui::GetStyle().WindowPadding.y) * scaleFactor);
+        fLastSize = Size<uint>();
+        fUpdateGeometryConstraints = true;
        #endif
     }
 
@@ -659,10 +668,48 @@ public:
 protected:
     void pluginWindowResized(const uint width, const uint height) override
     {
+        if (fIgnoreNextHostWindowResize)
+        {
+            fIgnoreNextHostWindowResize = false;
+            return;
+        }
+
+        if (fShowingHostWindow)
+        {
+            fShowingHostWindow = false;
+            fIgnoreNextHostWindowResize = true;
+            fUpdateGeometryConstraints = true;
+        }
+
         const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
 
         fNextSize = Size<uint>(width, height + extraHeight);
+
+        // reduce geometry constraint if needed
+        if (fIgnoreNextHostWindowResize)
+            return;
+        if (width < fCurrentConstraintSize.getWidth() || height < fCurrentConstraintSize.getHeight())
+            fUpdateGeometryConstraints = true;
     }
+
+   #if ILDAEIL_STANDALONE
+    void onResize(const ResizeEvent& ev) override
+    {
+        UI::onResize(ev);
+
+        if (fIgnoreNextHostWindowResize)
+            return;
+        if (fShowingHostWindow)
+            return;
+
+        if (fDrawingState == kDrawingPluginEmbedUI)
+        {
+            const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
+
+            fPluginHostWindow.setSize(ev.size.getWidth(), ev.size.getHeight() - extraHeight);
+        }
+    }
+   #endif
 
     void uiIdle() override
     {
@@ -675,10 +722,18 @@ protected:
             repaint();
         }
 
-        if (fNextSize.isValid())
+        if (fNextSize.isValid() && fLastSize != fNextSize)
         {
+            fLastSize = fNextSize;
+
+            if (fUpdateGeometryConstraints)
+            {
+                fUpdateGeometryConstraints = false;
+                fCurrentConstraintSize = fNextSize;
+                setGeometryConstraints(fNextSize.getWidth(), fNextSize.getHeight());
+            }
+
             setSize(fNextSize);
-            fNextSize = Size<uint>();
         }
 
         switch (fIdleState)
@@ -1235,6 +1290,8 @@ protected:
                 fDrawingState = kDrawingPluginList;
                #ifndef DISTRHO_OS_WASM
                 fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
+                fLastSize = Size<uint>();
+                fUpdateGeometryConstraints = true;
                #endif
             }
 

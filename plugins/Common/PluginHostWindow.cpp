@@ -252,6 +252,9 @@ struct PluginHostWindow::PrivateData
             }
         }
 #else
+        for (XEvent event; XPending(display) > 0;)
+            XNextEvent(display, &event);
+
         if (pluginWindow != 0)
         {
             int width = 0;
@@ -304,9 +307,6 @@ struct PluginHostWindow::PrivateData
                 pluginWindowCallbacks->pluginWindowResized(width, height);
             }
         }
-
-        for (XEvent event; XPending(display) > 0;)
-            XNextEvent(display, &event);
 #endif
     }
 
@@ -314,6 +314,23 @@ struct PluginHostWindow::PrivateData
     {
         xOffset = x;
         yOffset = y;
+    }
+
+    void setSize(const uint width, const uint height)
+    {
+#if defined(DISTRHO_OS_HAIKU)
+#elif defined(DISTRHO_OS_MAC)
+        if (pluginView != nullptr)
+            [pluginView setFrameSize:NSMakeSize(width, height)];
+#elif defined(DISTRHO_OS_WASM)
+#elif defined(DISTRHO_OS_WINDOWS)
+        if (pluginWindow != nullptr)
+            SetWindowPos(pluginWindow, 0, 0, 0, width, height,
+                         SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+#else
+        if (pluginWindow != 0)
+            XResizeWindow(display, pluginWindow, width, height);
+#endif
     }
 };
 
@@ -343,6 +360,11 @@ void PluginHostWindow::idle()
 void PluginHostWindow::setOffset(const uint x, const uint y)
 {
     pData->setOffset(x, y);
+}
+
+void PluginHostWindow::setSize(const uint width, const uint height)
+{
+    pData->setSize(width, height);
 }
 
 END_NAMESPACE_DGL
