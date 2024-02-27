@@ -160,7 +160,7 @@ gen:
 endif
 
 jack: carla dgl
-	$(MAKE) $(CARLA_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
+	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone
 
 # ---------------------------------------------------------------------------------------------------------------------
 

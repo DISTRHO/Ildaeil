@@ -692,7 +692,7 @@ protected:
             fUpdateGeometryConstraints = true;
     }
 
-   #if ILDAEIL_STANDALONE
+   #if DISTRHO_UI_USER_RESIZABLE
     void onResize(const ResizeEvent& ev) override
     {
         UI::onResize(ev);
@@ -701,13 +701,18 @@ protected:
             return;
         if (fShowingHostWindow)
             return;
+        if (fDrawingState != kDrawingPluginEmbedUI)
+            return;
 
-        if (fDrawingState == kDrawingPluginEmbedUI)
-        {
-            const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
-
-            fPluginHostWindow.setSize(ev.size.getWidth(), ev.size.getHeight() - extraHeight);
-        }
+        const double scaleFactor = getScaleFactor();
+        const uint extraHeight = kButtonHeight * scaleFactor + ImGui::GetStyle().WindowPadding.y * 2;
+        uint width = ev.size.getWidth();
+        uint height = ev.size.getHeight() - extraHeight;
+       #ifdef DISTRHO_OS_MAC
+        width /= scaleFactor;
+        height /= scaleFactor;
+       #endif
+        fPluginHostWindow.setSize(width, height);
     }
    #endif
 

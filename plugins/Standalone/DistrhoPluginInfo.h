@@ -34,13 +34,17 @@
 #define DISTRHO_PLUGIN_WANT_TIMEPOS       1
 #define DISTRHO_PLUGIN_WANT_DIRECT_ACCESS 1
 #define DISTRHO_UI_USE_CUSTOM             1
-#define DISTRHO_UI_USER_RESIZABLE         1
 #define DISTRHO_UI_CUSTOM_INCLUDE_PATH    "DearImGui.hpp"
 #define DISTRHO_UI_CUSTOM_WIDGET_TYPE     DGL_NAMESPACE::ImGuiTopLevelWidget
 #define DISTRHO_UI_DEFAULT_WIDTH          kInitialWidth
 #define DISTRHO_UI_DEFAULT_HEIGHT         kInitialHeight
 
 #define ILDAEIL_STANDALONE 1
+
+#ifndef __APPLE__
+// FIXME
+#define DISTRHO_UI_USER_RESIZABLE 1
+#endif
 
 static constexpr const uint kInitialWidth  = 640;
 static constexpr const uint kInitialHeight = 480;
