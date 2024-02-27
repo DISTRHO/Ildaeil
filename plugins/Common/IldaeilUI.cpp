@@ -260,14 +260,14 @@ public:
 
         if (d_isNotEqual(scaleFactor, 1.0))
         {
+            fPluginHostWindow.setOffset(0, kButtonHeight * scaleFactor + paddingY);
             setGeometryConstraints(kInitialWidth * scaleFactor, kInitialWidth * scaleFactor);
             setSize(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
-            fPluginHostWindow.setOffset(0, kButtonHeight * scaleFactor + paddingY);
         }
         else
         {
-            setGeometryConstraints(kInitialWidth, kInitialWidth);
             fPluginHostWindow.setOffset(0, kButtonHeight + paddingY);
+            setGeometryConstraints(kInitialWidth, kInitialWidth);
         }
 
         const CarlaHostHandle handle = fPlugin->fCarlaHostHandle;
