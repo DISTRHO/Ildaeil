@@ -688,7 +688,7 @@ protected:
         // reduce geometry constraint if needed
         if (fIgnoreNextHostWindowResize)
             return;
-        if (width < fCurrentConstraintSize.getWidth() || height < fCurrentConstraintSize.getHeight())
+        if (width < fCurrentConstraintSize.getWidth() || height + extraHeight < fCurrentConstraintSize.getHeight())
             fUpdateGeometryConstraints = true;
     }
 
