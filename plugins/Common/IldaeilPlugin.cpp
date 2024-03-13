@@ -155,11 +155,15 @@ static const char* getPathForVST2()
         {
             path += ":" + winePrefix + "/drive_c/Program Files/Common Files/VST2";
             path += ":" + winePrefix + "/drive_c/Program Files/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files/VSTPlugins";
             path += ":" + winePrefix + "/drive_c/Program Files/Steinberg/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files/Steinberg/VSTPlugins";
            #ifdef CARLA_OS_64BIT
             path += ":" + winePrefix + "/drive_c/Program Files (x86)/Common Files/VST2";
             path += ":" + winePrefix + "/drive_c/Program Files (x86)/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/VSTPlugins";
             path += ":" + winePrefix + "/drive_c/Program Files (x86)/Steinberg/VstPlugins";
+            path += ":" + winePrefix + "/drive_c/Program Files (x86)/Steinberg/VSTPlugins";
            #endif
         }
        #endif
@@ -175,7 +179,7 @@ static const char* getPathForVST3()
     if (path.isEmpty())
     {
        #if defined(CARLA_OS_HAIKU)
-        path = getHomePath() + "/.vst3:/system/add-ons/media/dssiplugins";
+        path = getHomePath() + "/.vst3:/system/add-ons/media/vst3plugins";
        #elif defined(CARLA_OS_MAC)
         path = getHomePath() + "/Library/Audio/Plug-Ins/VST3:/Library/Audio/Plug-Ins/VST3";
        #elif defined(CARLA_OS_WASM)
