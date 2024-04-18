@@ -66,6 +66,7 @@ struct PluginHostWindow::PrivateData
 #endif
     uint xOffset, yOffset;
 
+    bool brokenOffsetFactor;
     bool lookingForChildren;
 
     PrivateData(void* const wh, Callbacks* const cbs)
@@ -83,6 +84,7 @@ struct PluginHostWindow::PrivateData
 #endif
           xOffset(0),
           yOffset(0),
+          brokenOffsetFactor(false),
           lookingForChildren(false)
     {
 #if defined(DISTRHO_OS_HAIKU)
@@ -118,6 +120,9 @@ struct PluginHostWindow::PrivateData
         pluginWindow = nullptr;
 #else
         pluginWindow = 0;
+
+        for (XEvent event; XPending(display) > 0;)
+            XNextEvent(display, &event);
 #endif
     }
 
@@ -156,8 +161,8 @@ struct PluginHostWindow::PrivateData
     {
         if (lookingForChildren)
         {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
+           #if defined(DISTRHO_OS_HAIKU)
+           #elif defined(DISTRHO_OS_MAC)
             if (pluginView == nullptr)
             {
                 bool first = true;
@@ -172,15 +177,12 @@ struct PluginHostWindow::PrivateData
                     break;
                 }
             }
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
+           #elif defined(DISTRHO_OS_WASM)
+           #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
                 pluginWindow = FindWindowExA((::HWND)windowHandle, nullptr, nullptr, nullptr);
-#else
-            if (display == nullptr)
-                return;
-
-            if (pluginWindow == 0)
+           #else
+            if (display != nullptr && pluginWindow == 0)
             {
                 ::Window rootWindow, parentWindow;
                 ::Window* childWindows = nullptr;
@@ -196,11 +198,11 @@ struct PluginHostWindow::PrivateData
                     XFree(childWindows);
                 }
             }
-#endif
+           #endif
         }
 
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
         if (pluginView != nullptr)
         {
             const double scaleFactor = [[[pluginView window] screen] backingScaleFactor];
@@ -213,14 +215,16 @@ struct PluginHostWindow::PrivateData
 
             if (width > 1.0 && height > 1.0)
             {
+                NSPoint origin = brokenOffsetFactor ? NSMakePoint(xOffset, yOffset)
+                                                    : NSMakePoint(xOffset / scaleFactor, yOffset / scaleFactor);
+
                 lookingForChildren = false;
-                [pluginView setFrameOrigin:NSMakePoint(xOffset / scaleFactor, yOffset / scaleFactor)];
-                [pluginView setNeedsDisplay:YES];
+                [pluginView setFrameOrigin:origin];
                 pluginWindowCallbacks->pluginWindowResized(width * scaleFactor, height * scaleFactor);
             }
         }
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
             int width = 0;
@@ -244,7 +248,7 @@ struct PluginHostWindow::PrivateData
                 pluginWindowCallbacks->pluginWindowResized(width, height);
             }
         }
-#else
+       #else
         for (XEvent event; XPending(display) > 0;)
             XNextEvent(display, &event);
 
@@ -300,13 +304,18 @@ struct PluginHostWindow::PrivateData
                 pluginWindowCallbacks->pluginWindowResized(width, height);
             }
         }
-#endif
+       #endif
     }
 
     void setOffset(const uint x, const uint y)
     {
         xOffset = x;
         yOffset = y;
+    }
+
+    void setOffsetBroken(const bool broken)
+    {
+        brokenOffsetFactor = broken;
     }
 
     void setSize(const uint width, const uint height)
@@ -353,6 +362,11 @@ void PluginHostWindow::idle()
 void PluginHostWindow::setOffset(const uint x, const uint y)
 {
     pData->setOffset(x, y);
+}
+
+void PluginHostWindow::setOffsetBroken(bool brokenOffsetFactor)
+{
+    pData->setOffsetBroken(brokenOffsetFactor);
 }
 
 void PluginHostWindow::setSize(const uint width, const uint height)

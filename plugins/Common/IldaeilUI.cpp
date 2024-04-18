@@ -382,6 +382,11 @@ public:
         repaint();
     }
 
+    void resizeUI(uint32_t, uint32_t)
+    {
+        // unused for now
+    }
+
     void closeUI()
     {
         if (fIdleState == kIdleGiveIdleToUI)
@@ -416,6 +421,7 @@ public:
 
             fPluginHostWindow.restart();
             carla_embed_custom_ui(handle, fPluginId, fNativeWindowHandle);
+            fPluginHostWindow.idle();
         }
         else
        #endif
@@ -610,9 +616,20 @@ public:
 
         if (ok)
         {
+            d_debug("loadeded a plugin with label '%s' and name '%s' %lu",
+                    info.name.c_str(), info.label.c_str(), info.uniqueId);
+
             fPluginRunning = true;
             fPluginGenericUI = nullptr;
             fPluginFilename.clear();
+
+           #ifdef DISTRHO_OS_MAC
+            const bool brokenOffset = fPluginType == PLUGIN_VST2
+                && info.name == "Renoise Redux"
+                && info.uniqueId == d_cconst('R', 'R', 'D', 'X');
+            fPluginHostWindow.setOffsetBroken(brokenOffset);
+           #endif
+
             showPluginUI(handle, false);
 
 #ifdef WASM_TESTING
@@ -1777,7 +1794,14 @@ void ildaeilParameterChangeForUI(void* const ui, const uint32_t index, const flo
     static_cast<IldaeilUI*>(ui)->changeParameterFromDSP(index, value);
 }
 
-void ildaeilCloseUI(void* ui)
+void ildaeilResizeUI(void* const ui, const uint32_t width, const uint32_t height)
+{
+    DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
+
+    static_cast<IldaeilUI*>(ui)->resizeUI(width, height);
+}
+
+void ildaeilCloseUI(void* const ui)
 {
     DISTRHO_SAFE_ASSERT_RETURN(ui != nullptr,);
 

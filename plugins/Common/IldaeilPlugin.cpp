@@ -18,6 +18,7 @@
 #include "IldaeilBasePlugin.hpp"
 #include "DistrhoPluginUtils.hpp"
 
+#include "CarlaBackendUtils.hpp"
 #include "CarlaEngine.hpp"
 #include "water/files/File.h"
 #include "water/streams/MemoryOutputStream.h"
@@ -535,10 +536,13 @@ public:
         case NATIVE_HOST_OPCODE_UI_TOUCH_PARAMETER:
         case NATIVE_HOST_OPCODE_REQUEST_IDLE:
         case NATIVE_HOST_OPCODE_GET_FILE_PATH:
-        case NATIVE_HOST_OPCODE_UI_RESIZE:
         case NATIVE_HOST_OPCODE_PREVIEW_BUFFER_DATA:
             // TESTING
-            d_stdout("dispatcher %i, %i, %li, %p, %f", opcode, index, value, ptr, opt);
+            d_stdout("dispatcher %i:%s, %i, %li, %p, %f",
+                      opcode, NativeHostDispatcherOpcode2Str(opcode), index, value, ptr, opt);
+            break;
+        case NATIVE_HOST_OPCODE_UI_RESIZE:
+            ildaeilResizeUI(fUI, index, value);
             break;
         }
 

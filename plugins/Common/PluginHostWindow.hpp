@@ -39,6 +39,7 @@ public:
     bool hide();
     void idle();
     void setOffset(uint x, uint y);
+    void setOffsetBroken(bool brokenOffsetFactor);
     void setSize(uint width, uint height);
 };
 
