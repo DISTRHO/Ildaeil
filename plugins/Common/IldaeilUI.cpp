@@ -162,6 +162,7 @@ class IldaeilUI : public UI,
     } fIdleState = kIdleInit;
 
     IldaeilBasePlugin* const fPlugin;
+    void* const fNativeWindowHandle;
     PluginHostWindow fPluginHostWindow;
 
     BinaryType fBinaryType;
@@ -218,7 +219,8 @@ public:
           fDrawingState(kDrawingLoading),
           fIdleState(kIdleInit),
           fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
-          fPluginHostWindow(getWindow(), this),
+          fNativeWindowHandle(reinterpret_cast<void*>(getWindow().getNativeWindowHandle())),
+          fPluginHostWindow(fNativeWindowHandle, this),
           fBinaryType(BINARY_NATIVE),
           fPluginType(PLUGIN_LV2),
           fNextPluginType(fPluginType),
@@ -412,7 +414,8 @@ public:
             fIgnoreNextHostWindowResize = false;
             fShowingHostWindow = true;
 
-            carla_embed_custom_ui(handle, fPluginId, fPluginHostWindow.attachAndGetWindowHandle());
+            fPluginHostWindow.restart();
+            carla_embed_custom_ui(handle, fPluginId, fNativeWindowHandle);
         }
         else
        #endif

@@ -32,10 +32,10 @@ public:
         virtual void pluginWindowResized(uint width, uint height) = 0;
     };
 
-    explicit PluginHostWindow(Window& parentWindow, Callbacks* cbs);
+    explicit PluginHostWindow(void* windowHandle, Callbacks* cbs);
     ~PluginHostWindow();
 
-    void* attachAndGetWindowHandle();
+    void restart();
     bool hide();
     void idle();
     void setOffset(uint x, uint y);

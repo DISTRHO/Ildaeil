@@ -51,8 +51,7 @@ static int ildaeilErrorHandler(Display*, XErrorEvent*)
 
 struct PluginHostWindow::PrivateData
 {
-    Window& parentWindow;
-    const uintptr_t parentWindowId;
+    void* const windowHandle;
     Callbacks* const pluginWindowCallbacks;
 
 #if defined(DISTRHO_OS_HAIKU)
@@ -69,9 +68,8 @@ struct PluginHostWindow::PrivateData
 
     bool lookingForChildren;
 
-    PrivateData(Window& pw, Callbacks* const cbs)
-        : parentWindow(pw),
-          parentWindowId(pw.getNativeWindowHandle()),
+    PrivateData(void* const wh, Callbacks* const cbs)
+        : windowHandle(wh),
           pluginWindowCallbacks(cbs),
 #if defined(DISTRHO_OS_HAIKU)
 #elif defined(DISTRHO_OS_MAC)
@@ -109,22 +107,17 @@ struct PluginHostWindow::PrivateData
 #endif
     }
 
-    void* attachAndGetWindowHandle()
+    void restart()
     {
         lookingForChildren = true;
 #if defined(DISTRHO_OS_HAIKU)
-        return nullptr;
 #elif defined(DISTRHO_OS_MAC)
         pluginView = nullptr;
-        return (void*)parentWindowId;
 #elif defined(DISTRHO_OS_WASM)
-        return nullptr;
 #elif defined(DISTRHO_OS_WINDOWS)
         pluginWindow = nullptr;
-        return (void*)parentWindowId;
 #else
         pluginWindow = 0;
-        return (void*)parentWindowId;
 #endif
     }
 
@@ -168,7 +161,7 @@ struct PluginHostWindow::PrivateData
             if (pluginView == nullptr)
             {
                 bool first = true;
-                for (NSView* view in [(NSView*)parentWindowId subviews])
+                for (NSView* view in [(NSView*)windowHandle subviews])
                 {
                     if (first)
                     {
@@ -182,7 +175,7 @@ struct PluginHostWindow::PrivateData
 #elif defined(DISTRHO_OS_WASM)
 #elif defined(DISTRHO_OS_WINDOWS)
             if (pluginWindow == nullptr)
-                pluginWindow = FindWindowExA((::HWND)parentWindowId, nullptr, nullptr, nullptr);
+                pluginWindow = FindWindowExA((::HWND)windowHandle, nullptr, nullptr, nullptr);
 #else
             if (display == nullptr)
                 return;
@@ -193,7 +186,7 @@ struct PluginHostWindow::PrivateData
                 ::Window* childWindows = nullptr;
                 uint numChildren = 0;
 
-                XQueryTree(display, parentWindowId, &rootWindow, &parentWindow, &childWindows, &numChildren);
+                XQueryTree(display, (::Window)windowHandle, &rootWindow, &parentWindow, &childWindows, &numChildren);
 
                 if (numChildren > 0 && childWindows != nullptr)
                 {
@@ -334,17 +327,17 @@ struct PluginHostWindow::PrivateData
     }
 };
 
-PluginHostWindow::PluginHostWindow(Window& parentWindow, Callbacks* const cbs)
-  : pData(new PrivateData(parentWindow, cbs)) {}
+PluginHostWindow::PluginHostWindow(void* const windowHandle, Callbacks* const cbs)
+  : pData(new PrivateData(windowHandle, cbs)) {}
 
 PluginHostWindow::~PluginHostWindow()
 {
     delete pData;
 }
 
-void* PluginHostWindow::attachAndGetWindowHandle()
+void PluginHostWindow::restart()
 {
-    return pData->attachAndGetWindowHandle();
+    pData->restart();
 }
 
 bool PluginHostWindow::hide()
