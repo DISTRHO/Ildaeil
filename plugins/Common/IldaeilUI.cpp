@@ -175,6 +175,7 @@ class IldaeilUI : public UI,
     bool fPluginHasFileOpen;
     bool fPluginHasOutputParameters;
     bool fPluginIsBridge;
+    bool fPluginIsIdling;
     bool fPluginRunning;
     bool fPluginWillRunInBridgeMode;
     Mutex fPluginsMutex;
@@ -231,6 +232,7 @@ public:
           fPluginHasFileOpen(false),
           fPluginHasOutputParameters(false),
           fPluginIsBridge(false),
+          fPluginIsIdling(false),
           fPluginRunning(false),
           fPluginWillRunInBridgeMode(false),
           fCurrentPluginInfo(),
@@ -716,6 +718,20 @@ protected:
             return;
         if (width < fCurrentConstraintSize.getWidth() || height + extraHeight < fCurrentConstraintSize.getHeight())
             fUpdateGeometryConstraints = true;
+
+        if (fPluginIsIdling && fLastSize != fNextSize)
+        {
+            fLastSize = fNextSize;
+
+            if (fUpdateGeometryConstraints)
+            {
+                fUpdateGeometryConstraints = false;
+                fCurrentConstraintSize = fNextSize;
+                setGeometryConstraints(fNextSize.getWidth(), fNextSize.getHeight());
+            }
+
+            setSize(fNextSize);
+        }
     }
 
    #if DISTRHO_UI_USER_RESIZABLE
@@ -822,7 +838,10 @@ protected:
         case kIdleGiveIdleToUI:
             if (fPlugin->fCarlaPluginDescriptor->ui_idle != nullptr)
                 fPlugin->fCarlaPluginDescriptor->ui_idle(fPlugin->fCarlaPluginHandle);
+
+            fPluginIsIdling = true;
             fPluginHostWindow.idle();
+            fPluginIsIdling = false;
             break;
 
         case kIdleChangePluginType:
