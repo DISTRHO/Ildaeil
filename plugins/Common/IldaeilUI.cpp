@@ -382,9 +382,15 @@ public:
         repaint();
     }
 
-    void resizeUI(uint32_t, uint32_t)
+    void resizeUI(const uint32_t width, const uint32_t height)
     {
-        // unused for now
+        if (fDrawingState != kDrawingPluginEmbedUI)
+            return;
+
+        const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
+
+        fShowingHostWindow = true;
+        fNextSize = Size<uint>(width, height + extraHeight);
     }
 
     void closeUI()
