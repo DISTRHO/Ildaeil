@@ -152,7 +152,7 @@ static const char* getPathForVST2()
         if (winePrefix.isEmpty())
             winePrefix = getHomePath() + "/.wine";
 
-        if (water::File(winePrefix).exists())
+        if (water::File(winePrefix.toRawUTF8()).exists())
         {
             path += ":" + winePrefix + "/drive_c/Program Files/Common Files/VST2";
             path += ":" + winePrefix + "/drive_c/Program Files/VstPlugins";
@@ -198,7 +198,7 @@ static const char* getPathForVST3()
         if (winePrefix.isEmpty())
             winePrefix = getHomePath() + "/.wine";
 
-        if (water::File(winePrefix).exists())
+        if (water::File(winePrefix.toRawUTF8()).exists())
         {
             path += ":" + winePrefix + "/drive_c/Program Files/Common Files/VST3";
            #ifdef CARLA_OS_64BIT
@@ -236,7 +236,7 @@ static const char* getPathForCLAP()
         if (winePrefix.isEmpty())
             winePrefix = getHomePath() + "/.wine";
 
-        if (water::File(winePrefix).exists())
+        if (water::File(winePrefix.toRawUTF8()).exists())
         {
             path += ":" + winePrefix + "/drive_c/Program Files/Common Files/CLAP";
            #ifdef CARLA_OS_64BIT
@@ -264,7 +264,7 @@ static const char* getPathForJSFX()
         path = "/jsfx";
        #elif defined(CARLA_OS_WIN)
         path = water::File::getSpecialLocation(water::File::winAppData).getFullPathName() + "\\REAPER\\Effects";
-        if (! water::File(path).isDirectory())
+        if (! water::File(path.toRawUTF8()).isDirectory())
             path = water::File::getSpecialLocation(water::File::winProgramFiles).getFullPathName()
                  + "\\REAPER\\InstallData\\Effects";
        #else
@@ -406,7 +406,7 @@ public:
        #endif
 
         if (bundlePath != nullptr
-            && water::File(bundlePath + water::String(DISTRHO_OS_SEP_STR "carla-bridge-native" EXT)).existsAsFile())
+            && water::File(bundlePath + String(DISTRHO_OS_SEP_STR "carla-bridge-native" EXT)).existsAsFile())
         {
             fBinaryPath = bundlePath;
             carla_set_engine_option(fCarlaHostHandle, ENGINE_OPTION_PATH_BINARIES, 0, bundlePath);
@@ -414,7 +414,7 @@ public:
         }
        #ifdef CARLA_OS_MAC
         else if (bundlePath != nullptr
-            && water::File(bundlePath + water::String("/Contents/MacOS/carla-bridge-native" EXT)).existsAsFile())
+            && water::File(bundlePath + String("/Contents/MacOS/carla-bridge-native" EXT)).existsAsFile())
         {
             fBinaryPath = bundlePath;
             fBinaryPath += "/Contents/MacOS";
@@ -649,7 +649,8 @@ protected:
         {
             CarlaEngine* const engine = carla_get_engine_from_handle(fCarlaHostHandle);
 
-            water::XmlDocument xml(value);
+            const water::String wvalue(value);
+            water::XmlDocument xml(wvalue);
 
             {
                 const MutexLocker cml(sPluginInfoLoadMutex);

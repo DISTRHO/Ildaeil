@@ -76,7 +76,8 @@ endif # USE_SYSTEM_CARLA_BINS
 
 DGL_EXTRA_ARGS = \
 	DISTRHO_NAMESPACE=IldaeilDISTRHO \
-	DGL_NAMESPACE=IldaeilDGL
+	DGL_NAMESPACE=IldaeilDGL \
+	USE_FILE_BROWSER=true
 
 # ---------------------------------------------------------------------------------------------------------------------
 # DPF bundled plugins

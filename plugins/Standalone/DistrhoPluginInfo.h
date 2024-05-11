@@ -38,13 +38,10 @@
 #define DISTRHO_UI_CUSTOM_WIDGET_TYPE     DGL_NAMESPACE::ImGuiTopLevelWidget
 #define DISTRHO_UI_DEFAULT_WIDTH          kInitialWidth
 #define DISTRHO_UI_DEFAULT_HEIGHT         kInitialHeight
+#define DISTRHO_UI_FILE_BROWSER           1
+#define DISTRHO_UI_USER_RESIZABLE         1
 
 #define ILDAEIL_STANDALONE 1
-
-#ifndef __APPLE__
-// FIXME
-#define DISTRHO_UI_USER_RESIZABLE 1
-#endif
 
 static constexpr const uint kInitialWidth  = 640;
 static constexpr const uint kInitialHeight = 480;

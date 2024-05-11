@@ -1063,7 +1063,7 @@ protected:
         if (sha1sum != nullptr)
         {
             const water::String configDir(ildaeilConfigDir());
-            const water::File cacheFile(configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum);
+            const water::File cacheFile((configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum).toRawUTF8());
 
             if (cacheFile.create().ok())
             {
@@ -1183,7 +1183,7 @@ protected:
             return false;
 
         const water::String configDir(ildaeilConfigDir());
-        const water::File cacheFile(configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum);
+        const water::File cacheFile((configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum).toRawUTF8());
 
         if (cacheFile.existsAsFile())
         {
