@@ -258,7 +258,7 @@ static const char* getPathForJSFX()
        #if defined(CARLA_OS_MAC)
         path = getHomePath()
              + "/Library/Application Support/REAPER/Effects";
-        if (! water::File(path).isDirectory())
+        if (! water::File(path.toRawUTF8()).isDirectory())
             path = "/Applications/REAPER.app/Contents/InstallFiles/Effects";
        #elif defined(CARLA_OS_WASM)
         path = "/jsfx";
