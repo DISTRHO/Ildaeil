@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2023 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2025 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -35,30 +35,21 @@ public:
     static Mutex sPluginInfoLoadMutex;
     static const char* getPluginPath(PluginType ptype);
 
-    const NativePluginDescriptor* fCarlaPluginDescriptor;
-    NativePluginHandle fCarlaPluginHandle;
+    const NativePluginDescriptor* fCarlaPluginDescriptor = nullptr;
+    NativePluginHandle fCarlaPluginHandle = nullptr;
 
-    NativeHostDescriptor fCarlaHostDescriptor;
-    CarlaHostHandle fCarlaHostHandle;
+    NativeHostDescriptor fCarlaHostDescriptor{};
+    CarlaHostHandle fCarlaHostHandle = nullptr;
 
     String fBinaryPath;
 
-    void* fUI;
+    void* fUI = nullptr;
 
-    IldaeilBasePlugin()
-        : Plugin(0, 0, 1),
-          fCarlaPluginDescriptor(nullptr),
-          fCarlaPluginHandle(nullptr),
-          fCarlaHostHandle(nullptr),
-          fUI(nullptr)
-    {
-        memset(&fCarlaHostDescriptor, 0, sizeof(fCarlaHostDescriptor));
-    }
+    IldaeilBasePlugin() : Plugin(0, 0, 1) {}
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const char* ildaeilConfigDir();
 void ildaeilProjectLoadedFromDSP(void* ui);
 void ildaeilParameterChangeForUI(void* ui, uint32_t index, float value);
 void ildaeilResizeUI(void* ui, uint32_t width, uint32_t height);

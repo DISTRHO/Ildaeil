@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2024 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2025 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,6 +16,7 @@
  */
 
 #include "IldaeilBasePlugin.hpp"
+#include "DistrhoPluginUtils.hpp"
 #include "DistrhoUI.hpp"
 
 #if ILDAEIL_STANDALONE
@@ -78,53 +79,37 @@ class IldaeilUI : public UI,
     };
 
     struct PluginGenericUI {
-        char* title;
-        uint parameterCount;
+        char* title = nullptr;
+        uint parameterCount = 0;
         struct Parameter {
-            char* name;
-            char* printformat;
-            uint32_t rindex;
-            bool boolean, bvalue, log, readonly;
-            float min, max, power;
-            Parameter()
-                : name(nullptr),
-                  printformat(nullptr),
-                  rindex(0),
-                  boolean(false),
-                  bvalue(false),
-                  log(false),
-                  readonly(false),
-                  min(0.0f),
-                  max(1.0f) {}
+            char* name = nullptr;
+            char* printformat = nullptr;
+            uint32_t rindex = 0;
+            bool boolean = false;
+            bool bvalue = false;
+            bool log = false;
+            bool readonly = false;
+            float min = 0.f;
+            float max = 1.f;
             ~Parameter()
             {
                 std::free(name);
                 std::free(printformat);
             }
-        }* parameters;
-        float* values;
+        }* parameters = nullptr;
+        float* values = nullptr;
 
-        uint presetCount;
+        uint presetCount = 0;
         struct Preset {
-            uint32_t index;
-            char* name;
+            uint32_t index = 0;
+            char* name = nullptr;
             ~Preset()
             {
                 std::free(name);
             }
-        }* presets;
-        int currentPreset;
-        const char** presetStrings;
-
-        PluginGenericUI()
-            : title(nullptr),
-              parameterCount(0),
-              parameters(nullptr),
-              values(nullptr),
-              presetCount(0),
-              presets(nullptr),
-              currentPreset(-1),
-              presetStrings(nullptr) {}
+        }* presets = nullptr;
+        int currentPreset = -1;
+        const char** presetStrings = nullptr;
 
         ~PluginGenericUI()
         {
@@ -144,7 +129,7 @@ class IldaeilUI : public UI,
         kDrawingPluginGenericUI,
         kDrawingErrorInit,
         kDrawingErrorDraw
-    } fDrawingState;
+    } fDrawingState = kDrawingLoading;
 
     enum {
         kIdleInit,
@@ -161,46 +146,42 @@ class IldaeilUI : public UI,
         kIdleNothing
     } fIdleState = kIdleInit;
 
-    IldaeilBasePlugin* const fPlugin;
-    void* const fNativeWindowHandle;
-    PluginHostWindow fPluginHostWindow;
+    IldaeilBasePlugin* const fPlugin = static_cast<IldaeilBasePlugin*>(getPluginInstancePointer());
+    void* const fNativeWindowHandle = reinterpret_cast<void*>(getWindow().getNativeWindowHandle());
+    PluginHostWindow fPluginHostWindow { fNativeWindowHandle, this };
 
-    BinaryType fBinaryType;
-    PluginType fPluginType;
-    PluginType fNextPluginType;
-    uint fPluginId;
-    int fPluginSelected;
-    bool fPluginHasCustomUI;
-    bool fPluginHasEmbedUI;
-    bool fPluginHasFileOpen;
-    bool fPluginHasOutputParameters;
-    bool fPluginIsBridge;
-    bool fPluginIsIdling;
-    bool fPluginRunning;
-    bool fPluginWillRunInBridgeMode;
+    BinaryType fBinaryType = BINARY_NATIVE;
+    PluginType fPluginType = PLUGIN_LV2;
+    PluginType fNextPluginType = fPluginType;
+    uint fPluginId = 0;
+    int fPluginSelected = -1;
+    bool fPluginHasCustomUI = false;
+    bool fPluginHasEmbedUI = false;
+    bool fPluginHasFileOpen = false;
+    bool fPluginHasOutputParameters = false;
+    bool fPluginIsBridge = false;
+    bool fPluginIsIdling = false;
+    bool fPluginRunning = false;
+    bool fPluginWillRunInBridgeMode = false;
     Mutex fPluginsMutex;
-    PluginInfoCache fCurrentPluginInfo;
+    PluginInfoCache fCurrentPluginInfo{};
     std::vector<PluginInfoCache> fPlugins;
     ScopedPointer<PluginGenericUI> fPluginGenericUI;
 
-    bool fPluginSearchActive;
-    bool fPluginSearchFirstShow;
-    char fPluginSearchString[0xff];
+    bool fPluginSearchActive = false;
+    bool fPluginSearchFirstShow = false;
+    char fPluginSearchString[0xff] = {};
 
     String fPopupError, fPluginFilename, fDiscoveryTool;
     Size<uint> fCurrentConstraintSize, fLastSize, fNextSize;
-    bool fIgnoreNextHostWindowResize;
-    bool fShowingHostWindow;
-    bool fUpdateGeometryConstraints;
+    bool fIgnoreNextHostWindowResize = false;
+    bool fShowingHostWindow = false;
+    bool fUpdateGeometryConstraints = false;
 
     struct RunnerData {
-        bool needsReinit;
-        CarlaPluginDiscoveryHandle handle;
+        bool needsReinit = true;
+        CarlaPluginDiscoveryHandle handle = nullptr;
 
-        RunnerData()
-          : needsReinit(true),
-            handle(nullptr) {}
-        
         void init()
         {
             needsReinit = true;
@@ -216,32 +197,7 @@ class IldaeilUI : public UI,
 public:
     IldaeilUI()
         : UI(kInitialWidth, kInitialHeight),
-          Runner("IldaeilScanner"),
-          fDrawingState(kDrawingLoading),
-          fIdleState(kIdleInit),
-          fPlugin((IldaeilBasePlugin*)getPluginInstancePointer()),
-          fNativeWindowHandle(reinterpret_cast<void*>(getWindow().getNativeWindowHandle())),
-          fPluginHostWindow(fNativeWindowHandle, this),
-          fBinaryType(BINARY_NATIVE),
-          fPluginType(PLUGIN_LV2),
-          fNextPluginType(fPluginType),
-          fPluginId(0),
-          fPluginSelected(-1),
-          fPluginHasCustomUI(false),
-          fPluginHasEmbedUI(false),
-          fPluginHasFileOpen(false),
-          fPluginHasOutputParameters(false),
-          fPluginIsBridge(false),
-          fPluginIsIdling(false),
-          fPluginRunning(false),
-          fPluginWillRunInBridgeMode(false),
-          fCurrentPluginInfo(),
-          fPluginSearchActive(false),
-          fPluginSearchFirstShow(false),
-          fIgnoreNextHostWindowResize(false),
-          fShowingHostWindow(false),
-          fUpdateGeometryConstraints(false),
-          fRunnerData()
+          Runner("IldaeilScanner")
     {
         const double scaleFactor = getScaleFactor();
 
@@ -1062,7 +1018,7 @@ protected:
         // save plugin info into cache
         if (sha1sum != nullptr)
         {
-            const water::String configDir(ildaeilConfigDir());
+            const water::String configDir(getSpecialDir(kSpecialDirConfigForPlugin));
             const water::File cacheFile((configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum).toRawUTF8());
 
             if (cacheFile.create().ok())
@@ -1095,13 +1051,17 @@ protected:
                 else
                 {
                     d_stderr("Failed to write cache file for %s%s%s",
-                            ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+                            getSpecialDir(kSpecialDirConfigForPlugin),
+                             CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR,
+                             sha1sum);
                 }
             }
             else
             {
                 d_stderr("Failed to write cache file directories for %s%s%s",
-                         ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+                         getSpecialDir(kSpecialDirConfigForPlugin),
+                         CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR,
+                         sha1sum);
             }
         }
 
@@ -1182,7 +1142,7 @@ protected:
         if (sha1sum == nullptr)
             return false;
 
-        const water::String configDir(ildaeilConfigDir());
+        const water::String configDir(getSpecialDir(kSpecialDirConfigForPlugin));
         const water::File cacheFile((configDir + CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR + sha1sum).toRawUTF8());
 
         if (cacheFile.existsAsFile())
@@ -1237,7 +1197,9 @@ protected:
             else
             {
                 d_stderr("Failed to read cache file for %s%s%s",
-                         ildaeilConfigDir(), CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR, sha1sum);
+                         getSpecialDir(kSpecialDirConfigForPlugin),
+                         CARLA_OS_SEP_STR "cache" CARLA_OS_SEP_STR,
+                         sha1sum);
             }
         }
 

@@ -1,6 +1,6 @@
 /*
  * DISTRHO Ildaeil Plugin
- * Copyright (C) 2021-2024 Filipe Coelho <falktx@falktx.com>
+ * Copyright (C) 2021-2025 Filipe Coelho <falktx@falktx.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -54,82 +54,69 @@ struct PluginHostWindow::PrivateData
     void* const windowHandle;
     Callbacks* const pluginWindowCallbacks;
 
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
-    NSView* pluginView;
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
-    ::HWND pluginWindow;
-#else
-    ::Display* display;
-    ::Window pluginWindow;
-#endif
-    uint xOffset, yOffset;
+   #if defined(DISTRHO_OS_HAIKU)
+   #elif defined(DISTRHO_OS_MAC)
+    NSView* pluginView = nullptr;
+   #elif defined(DISTRHO_OS_WASM)
+   #elif defined(DISTRHO_OS_WINDOWS)
+    ::HWND pluginWindow = nullptr;
+   #else
+    ::Display* display = XOpenDisplay(nullptr);
+    ::Window pluginWindow = 0;
+   #endif
 
-    bool brokenOffsetFactor;
-    bool lookingForChildren;
+    uint xOffset = 0;
+    uint yOffset = 0;
+    bool brokenOffsetFactor = false;
+    bool lookingForChildren = false;
 
     PrivateData(void* const wh, Callbacks* const cbs)
         : windowHandle(wh),
-          pluginWindowCallbacks(cbs),
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
-          pluginView(nullptr),
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
-          pluginWindow(nullptr),
-#else
-          display(nullptr),
-          pluginWindow(0),
-#endif
-          xOffset(0),
-          yOffset(0),
-          brokenOffsetFactor(false),
-          lookingForChildren(false)
+          pluginWindowCallbacks(cbs)
     {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
-#else
-        display = XOpenDisplay(nullptr);
-        DISTRHO_SAFE_ASSERT_RETURN(display != nullptr,)
-#endif
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
+       #else
+        DISTRHO_SAFE_ASSERT_RETURN(display != nullptr,);
+       #endif
     }
 
     ~PrivateData()
     {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
-#else
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
+       #else
         if (display != nullptr)
             XCloseDisplay(display);
-#endif
+       #endif
     }
 
     void restart()
     {
         lookingForChildren = true;
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
+
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
         pluginView = nullptr;
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
         pluginWindow = nullptr;
-#else
+       #else
         pluginWindow = 0;
 
         for (XEvent event; XPending(display) > 0;)
             XNextEvent(display, &event);
-#endif
+       #endif
     }
 
     bool hide()
     {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
         if (pluginView != nullptr)
         {
             [pluginView setHidden:YES];
@@ -137,15 +124,15 @@ struct PluginHostWindow::PrivateData
             [NSOpenGLContext clearCurrentContext];
             return true;
         }
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
         {
             ShowWindow(pluginWindow, SW_HIDE);
             pluginWindow = nullptr;
             return true;
         }
-#else
+       #else
         if (pluginWindow != 0)
         {
             XUnmapWindow(display, pluginWindow);
@@ -153,7 +140,7 @@ struct PluginHostWindow::PrivateData
             pluginWindow = 0;
             return true;
         }
-#endif
+       #endif
         return false;
     }
 
@@ -320,19 +307,19 @@ struct PluginHostWindow::PrivateData
 
     void setSize(const uint width, const uint height)
     {
-#if defined(DISTRHO_OS_HAIKU)
-#elif defined(DISTRHO_OS_MAC)
+       #if defined(DISTRHO_OS_HAIKU)
+       #elif defined(DISTRHO_OS_MAC)
         if (pluginView != nullptr)
             [pluginView setFrameSize:NSMakeSize(width, height)];
-#elif defined(DISTRHO_OS_WASM)
-#elif defined(DISTRHO_OS_WINDOWS)
+       #elif defined(DISTRHO_OS_WASM)
+       #elif defined(DISTRHO_OS_WINDOWS)
         if (pluginWindow != nullptr)
             SetWindowPos(pluginWindow, 0, 0, 0, width, height,
                          SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER);
-#else
+       #else
         if (pluginWindow != 0)
             XResizeWindow(display, pluginWindow, width, height);
-#endif
+       #endif
     }
 };
 
