@@ -80,6 +80,12 @@ DGL_EXTRA_ARGS = \
 	DGL_NAMESPACE=IldaeilDGL \
 	USE_FILE_BROWSER=true
 
+ifeq ($(WASM),true)
+UI_TYPE = gles2
+else
+UI_TYPE = opengl
+endif
+
 # ---------------------------------------------------------------------------------------------------------------------
 # DPF bundled plugins
 
@@ -141,7 +147,7 @@ extra-wine64:
 	$(MAKE) $(CARLA_EXTRA_ARGS) -C carla wine64
 
 dgl:
-	$(MAKE) $(DGL_EXTRA_ARGS) -C dpf/dgl opengl
+	$(MAKE) $(DGL_EXTRA_ARGS) -C dpf/dgl $(UI_TYPE)
 
 plugins: carla dgl
 	$(MAKE) $(CARLA_EXTRA_ARGS) $(DGL_EXTRA_ARGS) $(ILDAEIL_FX_ARGS) -C plugins/Standalone

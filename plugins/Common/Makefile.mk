@@ -77,6 +77,11 @@ EXTRA_LIBS = $(CARLA_EXTRA_LIBS) $(STATIC_CARLA_PLUGIN_LIBS)
 # ---------------------------------------------------------------------------------------------------------------------
 # Do some more magic
 
+ifeq ($(WASM),true)
+EXTRA_DEPENDENCIES = ./jsfx
+UI_TYPE = gles2
+endif
+
 USE_CLAP_BUNDLE = true
 USE_VST2_BUNDLE = true
 include ../../dpf/Makefile.plugins.mk
@@ -190,5 +195,15 @@ else # USE_SYSTEM_CARLA_BINS
 carlabins:
 
 endif # USE_SYSTEM_CARLA_BINS
+
+# ---------------------------------------------------------------------------------------------------------------------
+# special step for wasm resources
+
+ifeq ($(WASM),true)
+
+./jsfx:
+	wget -O - https://falktx.com/data/wasm-things-2022-08-15.tar.gz | tar xz -C $(CURDIR)
+
+endif
 
 # ---------------------------------------------------------------------------------------------------------------------

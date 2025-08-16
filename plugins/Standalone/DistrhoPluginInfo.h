@@ -43,7 +43,7 @@
 
 #define ILDAEIL_STANDALONE 1
 
-static constexpr const uint kInitialWidth  = 640;
-static constexpr const uint kInitialHeight = 480;
+static constexpr const unsigned kInitialWidth  = 640;
+static constexpr const unsigned kInitialHeight = 480;
 
 #endif // DISTRHO_PLUGIN_INFO_H_INCLUDED

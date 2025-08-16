@@ -83,6 +83,7 @@ class IldaeilUI : public UI,
         uint parameterCount = 0;
         struct Parameter {
             char* name = nullptr;
+            char* group = nullptr;
             char* printformat = nullptr;
             uint32_t rindex = 0;
             bool boolean = false;
@@ -94,6 +95,7 @@ class IldaeilUI : public UI,
             ~Parameter()
             {
                 std::free(name);
+                std::free(group);
                 std::free(printformat);
             }
         }* parameters = nullptr;
@@ -175,6 +177,7 @@ class IldaeilUI : public UI,
     String fPopupError, fPluginFilename, fDiscoveryTool;
     Size<uint> fCurrentConstraintSize, fLastSize, fNextSize;
     bool fIgnoreNextHostWindowResize = false;
+    bool fInitialHostWindowShow = false;
     bool fShowingHostWindow = false;
     bool fUpdateGeometryConstraints = false;
 
@@ -347,8 +350,10 @@ public:
 
         const uint extraHeight = kButtonHeight * getScaleFactor() + ImGui::GetStyle().WindowPadding.y * 2;
 
-        fShowingHostWindow = true;
         fNextSize = Size<uint>(width, height + extraHeight);
+
+        if (fInitialHostWindowShow)
+            fUpdateGeometryConstraints = true;
     }
 
     void closeUI()
@@ -381,6 +386,7 @@ public:
             fPluginHasFileOpen = false;
 
             fIgnoreNextHostWindowResize = false;
+            fInitialHostWindowShow = true;
             fShowingHostWindow = true;
 
             fPluginHostWindow.restart();
@@ -424,13 +430,11 @@ public:
         else
             updatePluginGenericUI(handle);
 
-       #ifndef DISTRHO_OS_WASM
         const double scaleFactor = getScaleFactor();
         fNextSize = Size<uint>(kGenericWidth * scaleFactor,
                                (kGenericHeight + ImGui::GetStyle().WindowPadding.y) * scaleFactor);
         fLastSize = Size<uint>();
         fUpdateGeometryConstraints = true;
-       #endif
     }
 
     void createPluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* const info)
@@ -486,6 +490,8 @@ public:
 
             PluginGenericUI::Parameter& param(ui->parameters[j]);
             param.name = strdup(pinfo->name);
+            if (const char* const groupName = std::strchr(pinfo->groupName, ':'))
+                param.group = strdup(groupName + 1);
             param.printformat = printformat.getAndReleaseBuffer();
             param.rindex = i;
             param.boolean = pdata->hints & PARAMETER_IS_BOOLEAN;
@@ -736,7 +742,13 @@ protected:
                 setGeometryConstraints(fNextSize.getWidth(), fNextSize.getHeight());
             }
 
-            setSize(fNextSize);
+           #if ILDAEIL_STANDALONE
+            if (fInitialHostWindowShow)
+           #endif
+            {
+                fInitialHostWindowShow = false;
+                setSize(fNextSize);
+            }
         }
 
         switch (fIdleState)
@@ -1284,8 +1296,14 @@ protected:
         const double scaleFactor = getScaleFactor();
         const float padding = ImGui::GetStyle().WindowPadding.y * 2;
 
+       #if ILDAEIL_STANDALONE
+        const uint width = std::min(getWidth(), d_roundToUnsignedInt(kInitialWidth * scaleFactor));
+        ImGui::SetNextWindowPos(ImVec2((getWidth() - width) / 2, 0));
+        ImGui::SetNextWindowSize(ImVec2(width, kButtonHeight * scaleFactor + padding));
+       #else
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(getWidth(), kButtonHeight * scaleFactor + padding));
+       #endif
 
         const int flags = ImGuiWindowFlags_NoSavedSettings
                         | ImGuiWindowFlags_NoTitleBar
@@ -1300,11 +1318,9 @@ protected:
             {
                 fIdleState = kIdleHidePluginUI;
                 fDrawingState = kDrawingPluginList;
-               #ifndef DISTRHO_OS_WASM
                 fNextSize = Size<uint>(kInitialWidth * scaleFactor, kInitialHeight * scaleFactor);
                 fLastSize = Size<uint>();
                 fUpdateGeometryConstraints = true;
-               #endif
             }
 
             ImGui::SameLine();
@@ -1408,6 +1424,7 @@ protected:
                     }
 
                     ImGui::SameLine();
+                    ImGui::SetNextItemWidth(72 * scaleFactor);
                     if (ImGui::Combo("##buffersize", &current, bufferSizes_s, ARRAY_SIZE(bufferSizes_s)))
                     {
                         const uint next = bufferSizes_i[current];
@@ -1424,7 +1441,7 @@ protected:
 
     void setupMainWindowPos()
     {
-        const float scaleFactor = getScaleFactor();
+        const double scaleFactor = getScaleFactor();
 
         float y = 0;
         float height = getHeight();
@@ -1435,8 +1452,14 @@ protected:
             height -= y;
         }
 
+       #if ILDAEIL_STANDALONE
+        const uint width = std::min(getWidth(), d_roundToUnsignedInt(kInitialWidth * scaleFactor));
+        ImGui::SetNextWindowPos(ImVec2((getWidth() - width) * 0.5, y));
+        ImGui::SetNextWindowSize(ImVec2(width, height));
+       #else
         ImGui::SetNextWindowPos(ImVec2(0, y));
         ImGui::SetNextWindowSize(ImVec2(getWidth(), height));
+       #endif
     }
 
     void drawGenericUI()
@@ -1485,9 +1508,17 @@ protected:
                 }
             }
 
+            const char* groupName = "";
+
             for (uint32_t i=0; i < ui->parameterCount; ++i)
             {
                 PluginGenericUI::Parameter& param(ui->parameters[i]);
+
+                if (param.group != nullptr && std::strcmp(param.group, groupName) != 0)
+                {
+                    groupName = param.group;
+                    ImGui::SeparatorText(groupName);
+                }
 
                 if (param.readonly)
                 {
