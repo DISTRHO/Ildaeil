@@ -1590,12 +1590,16 @@ protected:
     {
         static const char* pluginTypes[] = {
             getPluginTypeAsString(PLUGIN_INTERNAL),
+           #ifndef DISTRHO_OS_WASM
             getPluginTypeAsString(PLUGIN_LADSPA),
             getPluginTypeAsString(PLUGIN_DSSI),
+           #endif
             getPluginTypeAsString(PLUGIN_LV2),
+           #ifndef DISTRHO_OS_WASM
             getPluginTypeAsString(PLUGIN_VST2),
             getPluginTypeAsString(PLUGIN_VST3),
             getPluginTypeAsString(PLUGIN_CLAP),
+           #endif
             getPluginTypeAsString(PLUGIN_JSFX),
             "Load from file..."
         };
@@ -1646,6 +1650,10 @@ protected:
             int current;
             switch (fPluginType)
             {
+           #ifdef DISTRHO_OS_WASM
+            case PLUGIN_JSFX: current = 2; break;
+            case PLUGIN_LV2: current = 1; break;
+           #else
             case PLUGIN_JSFX: current = 7; break;
             case PLUGIN_CLAP: current = 6; break;
             case PLUGIN_VST3: current = 5; break;
@@ -1653,6 +1661,7 @@ protected:
             case PLUGIN_LV2: current = 3; break;
             case PLUGIN_DSSI: current = 2; break;
             case PLUGIN_LADSPA: current = 1; break;
+           #endif
             default: current = 0; break;
             }
 
@@ -1661,6 +1670,12 @@ protected:
                 fIdleState = kIdleChangePluginType;
                 switch (current)
                 {
+               #ifdef DISTRHO_OS_WASM
+                case 0: fNextPluginType = PLUGIN_INTERNAL; break;
+                case 1: fNextPluginType = PLUGIN_LV2; break;
+                case 2: fNextPluginType = PLUGIN_JSFX; break;
+                case 3: fNextPluginType = PLUGIN_TYPE_COUNT; break;
+               #else
                 case 0: fNextPluginType = PLUGIN_INTERNAL; break;
                 case 1: fNextPluginType = PLUGIN_LADSPA; break;
                 case 2: fNextPluginType = PLUGIN_DSSI; break;
@@ -1670,6 +1685,7 @@ protected:
                 case 6: fNextPluginType = PLUGIN_CLAP; break;
                 case 7: fNextPluginType = PLUGIN_JSFX; break;
                 case 8: fNextPluginType = PLUGIN_TYPE_COUNT; break;
+               #endif
                 }
             }
 
