@@ -394,7 +394,7 @@ public:
             fShowingHostWindow = true;
 
            #if DISTRHO_UI_USER_RESIZABLE
-            getWindow().setResizable(fPluginHasResizableUI);
+            // getWindow().setResizable(fPluginHasResizableUI);
            #endif
 
             fPluginHostWindow.restart();
@@ -405,7 +405,7 @@ public:
        #endif
         {
            #if DISTRHO_UI_USER_RESIZABLE
-            getWindow().setResizable(true);
+            // getWindow().setResizable(true);
            #endif
 
             // fPluginHas* flags are updated in the next function
@@ -429,7 +429,7 @@ public:
         carla_show_custom_ui(handle, fPluginId, false);
 
        #if DISTRHO_UI_USER_RESIZABLE
-        getWindow().setResizable(true);
+        // getWindow().setResizable(true);
        #endif
     }
 
