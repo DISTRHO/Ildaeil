@@ -100,7 +100,7 @@ jobs:
           key: macos-${{ matrix.target }}-v${{ env.CACHE_VERSION }}
       - name: Set up dependencies
         run: |
-          brew uninstall --ignore-dependencies -f autoconf cmake
+          brew uninstall --ignore-dependencies -f cmake
           git clone --depth=1 https://github.com/DISTRHO/PawPaw.git
           ./PawPaw/.github/workflows/bootstrap-deps.sh macos-${{ matrix.target }}
       - name: Build extra dependencies

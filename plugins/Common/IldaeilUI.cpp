@@ -159,6 +159,7 @@ class IldaeilUI : public UI,
     int fPluginSelected = -1;
     bool fPluginHasCustomUI = false;
     bool fPluginHasEmbedUI = false;
+    bool fPluginHasResizableUI = false;
     bool fPluginHasFileOpen = false;
     bool fPluginHasOutputParameters = false;
     bool fPluginIsBridge = false;
@@ -302,6 +303,7 @@ public:
         {
             fPluginHasCustomUI = false;
             fPluginHasEmbedUI = false;
+            fPluginHasResizableUI = false;
             fPluginHasFileOpen = true;
         }
         else
@@ -309,6 +311,7 @@ public:
             fPluginHasCustomUI = hints & PLUGIN_HAS_CUSTOM_UI;
            #ifndef DISTRHO_OS_WASM
             fPluginHasEmbedUI = hints & PLUGIN_HAS_CUSTOM_EMBED_UI;
+            fPluginHasResizableUI = hints & PLUGIN_HAS_CUSTOM_RESIZABLE_UI;
            #endif
             fPluginHasFileOpen = false;
         }
@@ -383,11 +386,16 @@ public:
             fIdleState = kIdleGiveIdleToUI;
             fPluginHasCustomUI = true;
             fPluginHasEmbedUI = true;
+            fPluginHasResizableUI = hints & PLUGIN_HAS_CUSTOM_RESIZABLE_UI;
             fPluginHasFileOpen = false;
 
             fIgnoreNextHostWindowResize = false;
             fInitialHostWindowShow = true;
             fShowingHostWindow = true;
+
+           #if DISTRHO_UI_USER_RESIZABLE
+            getWindow().setResizable(fPluginHasResizableUI);
+           #endif
 
             fPluginHostWindow.restart();
             carla_embed_custom_ui(handle, fPluginId, fNativeWindowHandle);
@@ -396,6 +404,10 @@ public:
         else
        #endif
         {
+           #if DISTRHO_UI_USER_RESIZABLE
+            getWindow().setResizable(true);
+           #endif
+
             // fPluginHas* flags are updated in the next function
             createOrUpdatePluginGenericUI(handle);
 
@@ -413,8 +425,12 @@ public:
     {
         DISTRHO_SAFE_ASSERT_RETURN(fPluginRunning,);
 
-        if (fPluginHostWindow.hide())
-            carla_show_custom_ui(handle, fPluginId, false);
+        fPluginHostWindow.hide();
+        carla_show_custom_ui(handle, fPluginId, false);
+
+       #if DISTRHO_UI_USER_RESIZABLE
+        getWindow().setResizable(true);
+       #endif
     }
 
     void createOrUpdatePluginGenericUI(const CarlaHostHandle handle, const CarlaPluginInfo* info = nullptr)
