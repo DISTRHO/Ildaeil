@@ -202,7 +202,7 @@ endif # USE_SYSTEM_CARLA_BINS
 ifeq ($(WASM),true)
 
 ./jsfx:
-	wget -O - https://falktx.com/data/wasm-things-2022-08-15.tar.gz | tar xz -C $(CURDIR)
+	wget -O - https://falktx.com/data/wasm-things-2025-09-13.tar.gz | tar xz -C $(CURDIR)
 
 endif
 
