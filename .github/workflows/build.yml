@@ -3,7 +3,7 @@ name: build
 on: [push, pull_request]
 
 env:
-  CACHE_VERSION: 2
+  CACHE_VERSION: 3
   DEBIAN_FRONTEND: noninteractive
   PAWPAW_CI: 1
   PAWPAW_SKIP_LTO: 1
@@ -87,7 +87,7 @@ jobs:
     strategy:
       matrix:
         target: [intel, universal]
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
         with:
